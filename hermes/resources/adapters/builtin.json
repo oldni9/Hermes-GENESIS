@@ -1,0 +1,11 @@
+{
+    "id": "builtin",
+    "name": "Builtin Runtime Adapter",
+    "adapter_type": "llm",
+    "endpoint": "builtin://runtime",
+    "enabled": true,
+    "priority": 100,
+    "authentication": "none",
+    "plugin": "builtin",
+    "metadata": {}
+}

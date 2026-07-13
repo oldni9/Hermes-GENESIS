@@ -1,0 +1,12 @@
+[
+    {
+        "name": "default",
+        "enabled": true,
+        "strategy": "priority",
+        "allow_parallel": false,
+        "max_parallel_tasks": 1,
+        "metadata": {
+            "description": "Default Hermes scheduler."
+        }
+    }
+]

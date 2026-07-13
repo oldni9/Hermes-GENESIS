@@ -1,0 +1,162 @@
+# ============================================================================
+# Hermes Provider Knowledge Database
+# Provider Snapshot
+# ============================================================================
+
+provider:
+  id: gemini
+  display_name: Google Gemini
+  vendor: Google
+
+metadata:
+  last_updated: "2026-07-07"
+  category: frontier_llm
+  status: online
+
+compatibility:
+  native_api: true
+  openai_compatible: true
+
+sdk:
+  python:
+    package: google-genai
+
+  javascript:
+    package: "@google/genai"
+
+authentication:
+  type: api_key
+  environment_variable: GEMINI_API_KEY
+
+base_urls:
+  native: https://generativelanguage.googleapis.com/v1beta
+  openai: https://generativelanguage.googleapis.com/v1beta/openai
+
+features:
+
+  chat: true
+
+  streaming: true
+
+  vision: true
+
+  audio_input: true
+
+  audio_output: true
+
+  live_api: true
+
+  function_calling: true
+
+  embeddings: true
+
+  image_generation: true
+
+  multimodal: true
+
+recommended_models:
+
+  free:
+    primary: gemini-2.5-flash
+
+    alternatives:
+
+      - gemini-2.5-flash-lite
+
+      - gemini-3.5-flash
+
+  paid:
+
+    - gemini-2.5-pro
+
+models:
+
+  - id: gemini-3.5-flash
+    context: 1000000
+    free: true
+
+  - id: gemini-3.1-flash-lite
+    context: 1000000
+    free: true
+
+  - id: gemma-4-31b-it
+    context: 262000
+    free: true
+
+  - id: gemma-4-26b-a4b-it
+    context: 262000
+    free: true
+
+  - id: gemini-3-flash-preview
+    context: 1000000
+    free: true
+
+  - id: gemini-3.1-flash-lite-preview
+    context: 1000000
+    free: true
+
+  - id: gemini-2.5-flash
+    context: 1000000
+    free: true
+
+  - id: gemini-2.5-pro
+    context: 1000000
+    free: true
+
+  - id: gemini-flash-latest
+    context: 1000000
+    free: true
+
+  - id: gemini-flash-lite-latest
+    context: 1000000
+    free: true
+
+  - id: gemini-robotics-er-1.6-preview
+    context: 131000
+    free: true
+
+  - id: gemini-2.5-flash-lite
+    context: 1000000
+    free: true
+
+limits:
+
+  default:
+
+    rpm: 15
+
+    rpd: 1500
+
+  flash_lite:
+
+    rpm: 30
+
+    rpd: 1500
+
+account:
+
+  credit_card_required: false
+
+  phone_required: false
+
+  free_models: 12
+
+testing:
+
+  default_model: gemini-2.5-flash
+
+  prompt: "Hello from Hermes."
+
+notes:
+
+  - Native Gemini API supported.
+
+  - OpenAI compatible endpoint supported.
+
+  - Live API supported.
+
+  - Voice-to-Voice supported through Gemini Live.
+
+  - Free tier prompts may be used for product improvement.
+
+  - Flash Lite has higher RPM.

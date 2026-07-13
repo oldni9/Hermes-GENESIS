@@ -1,0 +1,29 @@
+{
+    "id": "balanced",
+
+    "name": "Balanced",
+
+    "description": "Default scheduler balancing quality, latency and cost.",
+
+    "enabled": true,
+
+    "strategy": "balanced",
+
+    "allow_parallel": false,
+
+    "allow_fallback": true,
+
+    "max_agents": 1,
+
+    "prefer_local": false,
+
+    "prefer_free": true,
+
+    "optimize_latency": false,
+
+    "optimize_quality": true,
+
+    "optimize_cost": false,
+
+    "metadata": {}
+}

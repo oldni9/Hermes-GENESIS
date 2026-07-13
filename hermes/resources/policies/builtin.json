@@ -1,0 +1,16 @@
+[
+    {
+        "name": "default",
+        "enabled": true,
+        "priority": 100,
+        "rules": {
+            "allow_local": true,
+            "allow_cloud": true,
+            "prefer_local": false,
+            "max_cost": null,
+            "minimum_trust": 0.0,
+            "max_latency_ms": null
+        },
+        "metadata": {}
+    }
+]

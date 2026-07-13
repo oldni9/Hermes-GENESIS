@@ -1,0 +1,14 @@
+[
+    {
+        "name": "default",
+        "enabled": true,
+        "default_pipeline": "default",
+        "default_policy": "default",
+        "default_scheduler": "default",
+        "providers": [
+            "general"
+        ],
+        "models": [],
+        "metadata": {}
+    }
+]
