@@ -1,0 +1,29 @@
+name: cloudflare
+
+display_name: Cloudflare AI
+
+client: CloudflareClient
+
+type: cloud
+
+enabled: true
+
+supports:
+
+  text: true
+  vision: true
+  image: true
+  audio: false
+  video: false
+  embeddings: true
+  live: false
+
+connection:
+
+  api_key_env: CLOUDFLARE_API_KEY
+
+models:
+
+  default: ""
+
+  available: []

@@ -9,27 +9,23 @@ Author:
 
 from __future__ import annotations
 
+from hermes.providers.registry import ProviderRegistry
+
 
 class HermesContainer:
     """
-    Stores every singleton used by Hermes.
+    Global dependency container.
 
-    Everything is created once.
-
-    Everything is shared.
-
-    Nothing creates anything itself.
+    Every singleton in Hermes lives here.
     """
 
     def __init__(self) -> None:
 
-        self.model_manager = None
+        self.provider_registry = ProviderRegistry()
 
         self.provider_manager = None
 
-        self.routing_engine = None
-
-        self.dispatcher = None
+        self.execution_service = None
 
         self.kernel_executor = None
 

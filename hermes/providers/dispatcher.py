@@ -2,6 +2,8 @@
 ===============================================================================
 Hermes Provider Dispatcher
 
+Dispatches provider requests through ClientFactory.
+
 Author:
     Aryan + ChatGPT
 ===============================================================================
@@ -9,38 +11,40 @@ Author:
 
 from __future__ import annotations
 
-from hermes.providers.clients import ProviderClientRegistry
-from hermes.providers.enums import ProviderType
+from hermes.providers.clients import ClientFactory
+from hermes.providers.provider import Provider
 from hermes.providers.request import ProviderRequest
 from hermes.providers.result import ProviderResult
 
 
 class ProviderDispatcher:
     """
-    Executes requests using registered provider clients.
+    Executes requests using provider clients.
+
+    The dispatcher knows nothing about Groq,
+    Gemini, Ollama, LM Studio, etc.
+
+    ClientFactory decides which implementation
+    should be instantiated.
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+    ) -> None:
 
-        self.registry = ProviderClientRegistry()
+        self.factory = ClientFactory()
 
     # ------------------------------------------------------------------
 
-    def execute(
+    def dispatch(
         self,
-        provider: ProviderType,
+        provider: Provider,
         request: ProviderRequest,
     ) -> ProviderResult:
 
-        client = self.registry.get(
+        client = self.factory.create(
             provider,
         )
-
-        if client is None:
-
-            raise RuntimeError(
-                f"No client registered for {provider}"
-            )
 
         return client.generate(
             request,

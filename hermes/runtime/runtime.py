@@ -1,52 +1,48 @@
 """
 ===============================================================================
 Hermes Runtime
-
-Author:
-    Aryan + ChatGPT
 ===============================================================================
 """
 
 from __future__ import annotations
 
-from hermes.integration.context import IntegrationContext
-from hermes.integration.engine import IntegrationEngine
+from datetime import datetime
+
+from hermes.runtime.context import RuntimeContext
+from hermes.runtime.registry import RuntimeRegistry
+from hermes.runtime.session import RuntimeSession
+from hermes.runtime.state import RuntimeState
 
 
 class Runtime:
     """
-    Central Hermes Runtime.
-
-    The Runtime owns exactly one IntegrationEngine.
-
-    It no longer coordinates Executive,
-    Reasoner,
-    Scheduler,
-    or Task Builder directly.
-
-    Those responsibilities belong to the
-    Integration Engine.
+    Main Hermes Runtime.
     """
 
     def __init__(self) -> None:
 
-        self.integration = IntegrationEngine()
+        self.state = RuntimeState()
 
-    # ------------------------------------------------------------------
+        self.session = RuntimeSession()
 
-    def process(
-        self,
-        prompt: str,
-    ) -> None:
-        """
-        Execute the complete Hermes pipeline.
-        """
+        self.context = RuntimeContext()
 
-        context = IntegrationContext(
-            prompt=prompt,
-            metadata={},
-        )
+        self.registry = RuntimeRegistry()
 
-        self.integration.process(
-            context,
-        )
+    # ---------------------------------------------------------
+
+    def boot(self) -> None:
+
+        self.state.booted = True
+
+        self.state.ready = True
+
+        self.state.started_at = datetime.utcnow()
+
+    # ---------------------------------------------------------
+
+    def shutdown(self) -> None:
+
+        self.state.shutting_down = True
+
+        self.state.ready = False

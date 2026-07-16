@@ -1,24 +1,25 @@
 """
 ===============================================================================
 Hermes Integration Context
-
-Author:
-    Aryan + ChatGPT
 ===============================================================================
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 
 @dataclass(slots=True)
 class IntegrationContext:
     """
-    Shared runtime integration context.
+    Shared runtime context.
+
+    Passed through the integration pipeline.
     """
 
     prompt: str
 
-    metadata: dict[str, Any]
+    metadata: dict[str, Any] = field(
+        default_factory=dict,
+    )

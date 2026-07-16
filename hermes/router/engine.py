@@ -2,6 +2,8 @@
 ===============================================================================
 Hermes Routing Engine
 
+Central routing pipeline.
+
 Author:
     Aryan + ChatGPT
 ===============================================================================
@@ -9,64 +11,55 @@ Author:
 
 from __future__ import annotations
 
-from hermes.capability.enums import CapabilityType
+from hermes.providers.registry import ProviderRegistry
+from hermes.providers.schemas import ProviderInfo
 
-from hermes.models.manager import ModelManager
-from hermes.providers.manager import ProviderManager
-
-from hermes.router.model_resolver import ModelResolver
-from hermes.router.candidate_builder import CandidateBuilder
-from hermes.router.model_selector import ModelSelector
+from hermes.routing.requirements import RequirementAnalyzer
+from hermes.routing.ranking import RankingEngine
+from hermes.routing.selector import ProviderSelector
 
 
 class RoutingEngine:
     """
-    Complete routing pipeline.
+    Main routing pipeline.
 
-        Capability
-             ↓
-      ModelResolver
-             ↓
-     CandidateBuilder
-             ↓
-      ModelSelector
-             ↓
-           Route
+    Pipeline:
+
+        Analyze
+            ↓
+        Rank
+            ↓
+        Select
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        registry: ProviderRegistry,
+    ) -> None:
 
-        # Managers own the registries
-        self.model_manager = ModelManager()
-        self.provider_manager = ProviderManager()
+        self.registry = registry
 
-        # Resolver uses the model manager
-        self.models = ModelResolver(
-            self.model_manager,
-        )
+        self.analyzer = RequirementAnalyzer()
 
-        # Builder only needs the provider registry
-        self.builder = CandidateBuilder(
-            self.provider_manager.registry,
-        )
+        self.ranker = RankingEngine()
 
-        self.selector = ModelSelector()
+        self.selector = ProviderSelector()
 
     # ------------------------------------------------------------------
 
-    def resolve(
+    def route(
         self,
-        capability: CapabilityType,
-    ):
+    ) -> ProviderInfo:
 
-        models = self.models.resolve(
-            capability,
-        )
+        requirements = self.analyzer.analyze()
 
-        candidates = self.builder.build(
-            models,
+        providers = self.registry.providers()
+
+        ranked = self.ranker.rank(
+            providers,
+            requirements,
         )
 
         return self.selector.select(
-            candidates,
+            ranked,
         )

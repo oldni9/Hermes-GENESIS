@@ -2,8 +2,6 @@
 ===============================================================================
 Hermes Gemini Client
 
-Native Google Gemini SDK implementation.
-
 Author:
     Aryan + ChatGPT
 ===============================================================================
@@ -11,42 +9,35 @@ Author:
 
 from __future__ import annotations
 
+import google.generativeai as genai
+
 from hermes.providers.clients.base_client import BaseProviderClient
+from hermes.providers.config import ProviderConfig
 from hermes.providers.request import ProviderRequest
 from hermes.providers.result import ProviderResult
 
 
 class GeminiClient(BaseProviderClient):
     """
-    Native Gemini implementation.
-
-    Future implementation will use:
-
-        google-genai SDK
-
-    NOT raw HTTP requests.
+    Google Gemini Provider Client.
     """
 
     def __init__(
         self,
-        api_key: str | None = None,
+        config: ProviderConfig,
     ) -> None:
 
-        self.api_key = api_key
+        super().__init__(config.name)
 
-        #
-        # Future:
-        #
-        # from google import genai
-        # self.client = genai.Client(api_key=...)
-        #
+        self.config = config
 
-    # ------------------------------------------------------------------
+        genai.configure(
+            api_key=config.api_key,
+        )
 
-    @property
-    def provider_name(self) -> str:
-
-        return "Gemini"
+        self.model = genai.GenerativeModel(
+            config.default_model,
+        )
 
     # ------------------------------------------------------------------
 
@@ -55,44 +46,12 @@ class GeminiClient(BaseProviderClient):
         request: ProviderRequest,
     ) -> ProviderResult:
 
-        #
-        # SDK implementation comes later.
-        #
-
-        return ProviderResult(
-
-            success=True,
-
-            text=f"[Gemini Placeholder] {request.prompt}",
-
+        response = self.model.generate_content(
+            request.prompt,
         )
 
-    # ------------------------------------------------------------------
-
-    def stream(
-        self,
-        request: ProviderRequest,
-    ):
-
-        raise NotImplementedError()
-
-    # ------------------------------------------------------------------
-
-    def live(
-        self,
-        request: ProviderRequest,
-    ):
-
-        raise NotImplementedError()
-
-    # ------------------------------------------------------------------
-
-    def list_models(self):
-
-        raise NotImplementedError()
-
-    # ------------------------------------------------------------------
-
-    def health_check(self) -> bool:
-
-        return True
+        return ProviderResult(
+            success=True,
+            text=response.text,
+            raw=response,
+        )

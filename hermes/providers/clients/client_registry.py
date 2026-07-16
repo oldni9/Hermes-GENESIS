@@ -9,53 +9,61 @@ Author:
 
 from __future__ import annotations
 
-from hermes.providers.enums import ProviderType
-
 from hermes.providers.clients.base_client import BaseProviderClient
 
 
 class ProviderClientRegistry:
     """
-    Stores provider client implementations.
+    Stores instantiated provider clients.
 
-    Dispatcher retrieves clients from here instead
-    of using if/else chains.
+    Dispatcher never imports provider classes directly.
+
+    It simply asks this registry.
     """
 
     def __init__(self) -> None:
 
-        self._clients: dict[
-            ProviderType,
-            BaseProviderClient,
-        ] = {}
+        self._clients: dict[str, BaseProviderClient] = {}
 
-    # -------------------------------------------------------------
+    # ------------------------------------------------------------------
 
     def register(
         self,
-        provider: ProviderType,
         client: BaseProviderClient,
     ) -> None:
 
-        self._clients[
-            provider
-        ] = client
+        self._clients[client.provider_name] = client
 
-    # -------------------------------------------------------------
+    # ------------------------------------------------------------------
 
     def get(
         self,
-        provider: ProviderType,
-    ) -> BaseProviderClient | None:
+        provider_name: str,
+    ) -> BaseProviderClient:
 
-        return self._clients.get(
-            provider,
-        )
+        return self._clients[provider_name]
 
-    # -------------------------------------------------------------
+    # ------------------------------------------------------------------
 
-    def all(self):
+    def exists(
+        self,
+        provider_name: str,
+    ) -> bool:
 
-        return list(
-            self._clients.values()
-        )
+        return provider_name in self._clients
+
+    # ------------------------------------------------------------------
+
+    def names(
+        self,
+    ) -> list[str]:
+
+        return list(self._clients.keys())
+
+    # ------------------------------------------------------------------
+
+    def all(
+        self,
+    ) -> dict[str, BaseProviderClient]:
+
+        return self._clients

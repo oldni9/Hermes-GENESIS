@@ -18,11 +18,11 @@ class CandidateBuilder:
     """
     Converts Models into RouteScore candidates.
 
-    It DOES NOT know about routing.
+    It never executes providers.
 
-    It DOES NOT create ProviderManager.
+    It never creates ProviderManager.
 
-    It only receives a ProviderRegistry.
+    It only converts Model -> Provider -> RouteScore.
     """
 
     def __init__(
@@ -58,7 +58,9 @@ class CandidateBuilder:
 
                     provider=provider,
 
-                    score=float(model.priority),
+                    score=float(
+                        model.priority,
+                    ),
 
                 )
 

@@ -21,23 +21,23 @@ from hermes.providers.result import ProviderResult
 class BaseProviderClient(ABC):
     """
     Base class for every provider implementation.
-
-    Every provider must implement the same interface so
-    Hermes can dispatch requests without caring about the
-    underlying API.
     """
 
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(
+        self,
+        provider_name: str,
+    ) -> None:
+
+        self._provider_name = provider_name
 
     # ------------------------------------------------------------------
 
     @property
-    @abstractmethod
-    def provider_name(self) -> str:
-        """
-        Human-readable provider name.
-        """
+    def provider_name(
+        self,
+    ) -> str:
+
+        return self._provider_name
 
     # ------------------------------------------------------------------
 
@@ -56,11 +56,6 @@ class BaseProviderClient(ABC):
         self,
         request: ProviderRequest,
     ):
-        """
-        Streaming generation.
-
-        Override if supported.
-        """
         raise NotImplementedError(
             f"{self.provider_name} does not support streaming."
         )
@@ -71,11 +66,6 @@ class BaseProviderClient(ABC):
         self,
         request: ProviderRequest,
     ):
-        """
-        Embedding generation.
-
-        Override if supported.
-        """
         raise NotImplementedError(
             f"{self.provider_name} does not support embeddings."
         )
@@ -86,11 +76,6 @@ class BaseProviderClient(ABC):
         self,
         request: ProviderRequest,
     ):
-        """
-        Image generation.
-
-        Override if supported.
-        """
         raise NotImplementedError(
             f"{self.provider_name} does not support image generation."
         )
@@ -101,11 +86,6 @@ class BaseProviderClient(ABC):
         self,
         request: ProviderRequest,
     ):
-        """
-        Text-to-Speech.
-
-        Override if supported.
-        """
         raise NotImplementedError(
             f"{self.provider_name} does not support speech."
         )
@@ -116,11 +96,6 @@ class BaseProviderClient(ABC):
         self,
         request: ProviderRequest,
     ):
-        """
-        Speech-to-Text.
-
-        Override if supported.
-        """
         raise NotImplementedError(
             f"{self.provider_name} does not support transcription."
         )
@@ -131,35 +106,23 @@ class BaseProviderClient(ABC):
         self,
         request: ProviderRequest,
     ):
-        """
-        Low-latency realtime session.
-
-        Used by providers like Gemini Live.
-
-        Override if supported.
-        """
         raise NotImplementedError(
             f"{self.provider_name} does not support live sessions."
         )
 
     # ------------------------------------------------------------------
 
-    def list_models(self):
-        """
-        Return available models.
-
-        Override if supported.
-        """
+    def list_models(
+        self,
+    ):
         raise NotImplementedError(
             f"{self.provider_name} cannot enumerate models."
         )
 
     # ------------------------------------------------------------------
 
-    def health_check(self) -> bool:
-        """
-        Simple connectivity test.
+    def health_check(
+        self,
+    ) -> bool:
 
-        Override in concrete providers.
-        """
         return True

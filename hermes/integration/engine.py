@@ -9,90 +9,49 @@ Author:
 
 from __future__ import annotations
 
-from hermes.execution.execution_task import ExecutionTask
-from hermes.execution.result import ExecutionResult
+from hermes.kernel import KernelExecutor
 
 from hermes.integration.context import IntegrationContext
-from hermes.integration.pipeline import IntegrationPipeline
-from hermes.integration.validator import IntegrationValidator
+from hermes.integration.result import IntegrationResult
 
 
 class IntegrationEngine:
     """
-    Coordinates the complete Hermes execution pipeline.
+    Integration layer.
 
-        Prompt
-            ↓
-        Executive
-            ↓
-        Reasoning
-            ↓
-        Scheduler
-            ↓
-      Task Builder (Graph → Bundle)
-            ↓
-      Execution Engine
+    Receives an IntegrationContext.
+
+    Uses the Kernel to execute AI work.
+
+    Returns IntegrationResults.
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        kernel: KernelExecutor,
+    ) -> None:
 
-        self.pipeline = IntegrationPipeline()
-
-        self.validator = IntegrationValidator()
+        self.kernel = kernel
 
     # ------------------------------------------------------------------
 
     def process(
         self,
         context: IntegrationContext,
-    ) -> list[ExecutionResult]:
+    ) -> list[IntegrationResult]:
 
-        self.validator.validate(
-            context,
-        )
-
-        #
-        # Executive
-        #
-
-        decision = self.pipeline.executive.process(
+        provider_result = self.kernel.execute(
             context.prompt,
         )
 
-        #
-        # Reasoning
-        #
+        return [
 
-        graph = self.pipeline.reasoning.process(
-            decision,
-        )
+            IntegrationResult(
 
-        #
-        # Scheduler
-        #
+                output=provider_result.text,
 
-        graph = self.pipeline.scheduler.process(
-            graph,
-        )
+                metadata={},
 
-        #
-        # Build every KernelTask
-        #
+            )
 
-        bundle = self.pipeline.taskbuilder.process(
-            graph,
-        )
-
-        #
-        # Execute every KernelTask
-        #
-
-        bundle = self.pipeline.taskbuilder.process(
-            graph,
-        ) 
-
-        results = self.pipeline.execution.execute(
-           bundle,
-        )
-
-        return results
+        ]

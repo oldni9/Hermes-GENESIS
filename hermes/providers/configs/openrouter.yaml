@@ -1,0 +1,29 @@
+name: openrouter
+
+display_name: OpenRouter
+
+client: OpenRouterClient
+
+type: cloud
+
+enabled: true
+
+supports:
+
+  text: true
+  vision: true
+  image: false
+  audio: false
+  video: false
+  embeddings: false
+  live: false
+
+connection:
+
+  api_key_env: OPENROUTER_API_KEY
+
+models:
+
+  default: openai/gpt-5
+
+  available: []

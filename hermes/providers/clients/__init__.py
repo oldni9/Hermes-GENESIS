@@ -1,13 +1,11 @@
 """
-===============================================================================
 Hermes Provider Clients
-===============================================================================
 """
 
-from hermes.providers.clients.base_client import BaseProviderClient
-from hermes.providers.clients.client_registry import ProviderClientRegistry
+from .base_client import BaseProviderClient
+from .client_factory import ClientFactory
 
 __all__ = [
     "BaseProviderClient",
-    "ProviderClientRegistry",
+    "ClientFactory",
 ]

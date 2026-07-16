@@ -1,0 +1,29 @@
+name: ollama
+
+display_name: Ollama
+
+client: OllamaClient
+
+type: local
+
+enabled: true
+
+supports:
+
+  text: true
+  vision: true
+  image: false
+  audio: false
+  video: false
+  embeddings: true
+  live: false
+
+connection:
+
+  host: http://localhost:11434
+
+models:
+
+  default: qwen3
+
+  available: []

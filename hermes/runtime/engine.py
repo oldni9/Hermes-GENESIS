@@ -9,53 +9,58 @@ Author:
 
 from __future__ import annotations
 
-from hermes.integration.context import IntegrationContext
-from hermes.integration.engine import IntegrationEngine
+from hermes.execution import ExecutionService
+
 from hermes.response import Response
 
 
 class RuntimeEngine:
     """
     Hermes Runtime Engine.
+
+    Runtime is responsible for:
+
+        User Prompt
+              ↓
+        ExecutionService
+              ↓
+         ProviderManager
+              ↓
+           AI Provider
+              ↓
+            Response
     """
 
-    def __init__(self) -> None:
+    def __init__(
 
-        self.integration = IntegrationEngine()
+        self,
+
+        execution: ExecutionService,
+
+    ) -> None:
+
+        self.execution = execution
 
     # ------------------------------------------------------------------
 
     def execute(
+
         self,
+
         prompt: str,
+
     ) -> Response:
 
-        context = IntegrationContext(
-            prompt=prompt,
-            metadata={},
+        result = self.execution.execute(
+
+            prompt,
+
         )
-
-        results = self.integration.process(
-            context,
-        )
-
-        outputs = []
-
-        for result in results:
-
-            if result.output is not None:
-
-                outputs.append(
-                    str(result.output),
-                )
-
-        text = "\n".join(outputs)
-
-        if not text:
-
-            text = "Execution completed."
 
         return Response(
-            text=text,
-            data=results,
+
+            text=result.text,
+
+            data=result,
+
         )

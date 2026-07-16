@@ -2,8 +2,6 @@
 ===============================================================================
 Hermes OpenAI Compatible Client
 
-Base class for providers exposing an OpenAI-compatible API.
-
 Author:
     Aryan + ChatGPT
 ===============================================================================
@@ -11,41 +9,64 @@ Author:
 
 from __future__ import annotations
 
+from openai import OpenAI
+
 from hermes.providers.clients.base_client import BaseProviderClient
+from hermes.providers.config import ProviderConfig
 from hermes.providers.request import ProviderRequest
 from hermes.providers.result import ProviderResult
 
 
 class OpenAICompatibleClient(BaseProviderClient):
+    """
+    Base implementation for every OpenAI-compatible provider.
+
+    Examples:
+
+        - Groq
+        - OpenRouter
+        - LM Studio
+        - Ollama
+        - Cloudflare
+        - ZAI
+        - Together
+        - Fireworks
+        - DeepSeek
+    """
 
     def __init__(
         self,
-        base_url: str = "",
-        api_key: str | None = None,
+        config: ProviderConfig,
     ) -> None:
 
-        self.base_url = base_url
+        super().__init__(config.name)
 
-        self.api_key = api_key
+        self.config = config
 
-    # -------------------------------------------------------------
+        self.client = OpenAI(
+            api_key=config.api_key,
+            base_url=config.base_url,
+        )
 
-    @property
-    def provider_name(self) -> str:
-
-        return "OpenAI Compatible"
-
-    # -------------------------------------------------------------
+    # ------------------------------------------------------------------
 
     def generate(
         self,
         request: ProviderRequest,
     ) -> ProviderResult:
 
+        response = self.client.chat.completions.create(
+            model=self.config.default_model,
+            messages=[
+                {
+                    "role": "user",
+                    "content": request.prompt,
+                }
+            ],
+        )
+
         return ProviderResult(
-
             success=True,
-
-            text=f"[OpenAI Compatible] {request.prompt}",
-
+            text=response.choices[0].message.content,
+            raw=response,
         )

@@ -9,68 +9,37 @@ Author:
 
 from __future__ import annotations
 
-from hermes.kernel.kernel_task import KernelTask
-from hermes.kernel.result import TaskResult
-
-from hermes.providers.manager import ProviderManager
-from hermes.providers.request import ProviderRequest
-
 from hermes.capability.enums import CapabilityType
+
+from hermes.execution.service import ExecutionService
+
+from hermes.providers.result import ProviderResult
 
 
 class KernelExecutor:
+    """
+    Thin wrapper around ExecutionService.
 
-    def __init__(self) -> None:
+    The Kernel owns no routing logic.
+    The Kernel owns no providers.
+    """
 
-        self.providers = ProviderManager()
+    def __init__(
+        self,
+        execution: ExecutionService,
+    ) -> None:
+
+        self.execution = execution
 
     # ------------------------------------------------------------------
 
     def execute(
         self,
-        task: KernelTask,
-    ) -> TaskResult:
+        prompt: str,
+        capability: CapabilityType = CapabilityType.CHAT,
+    ) -> ProviderResult:
 
-        try:
-
-            request = ProviderRequest(
-
-                prompt=str(
-                    task.payload,
-                ),
-
-            )
-
-            result = self.providers.execute(
-
-                request,
-
-                CapabilityType.CHAT,
-
-            )
-
-            return TaskResult(
-
-                task_id=task.id,
-
-                success=result.success,
-
-                output=result.text,
-
-                error=None,
-
-            )
-
-        except Exception as exc:
-
-            return TaskResult(
-
-                task_id=task.id,
-
-                success=False,
-
-                output=None,
-
-                error=str(exc),
-
-            )
+        return self.execution.execute(
+            prompt,
+            capability,
+        )

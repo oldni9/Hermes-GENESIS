@@ -1,0 +1,29 @@
+name: zai
+
+display_name: ZAI
+
+client: ZAIClient
+
+type: cloud
+
+enabled: true
+
+supports:
+
+  text: true
+  vision: true
+  image: false
+  audio: false
+  video: false
+  embeddings: true
+  live: false
+
+connection:
+
+  api_key_env: ZAI_API_KEY
+
+models:
+
+  default: glm-4.5
+
+  available: []
