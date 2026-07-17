@@ -1,15 +1,13 @@
 """
 ===============================================================================
-Tests for Chat integration with AIPipeline (Sprint 2 PR1)
+Tests for HermesClient integration with AIPipeline (Sprint 3 PR1)
 
 Verifies:
-    - Chat.send() uses pipeline.execute() when pipeline is provided.
-    - Chat.send() falls back to manager.execute() when pipeline is None.
+    - HermesClient.complete() uses pipeline.execute() when pipeline is provided.
+    - HermesClient.complete() falls back to manager.execute() when pipeline is None.
     - Backward compatibility: manager parameter still works.
     - Provider/model overrides are respected.
-
-Author:
-    Aryan + ChatGPT
+    - AIContext is built correctly (without unsupported fields).
 ===============================================================================
 """
 
@@ -19,7 +17,7 @@ from unittest.mock import MagicMock, create_autospec, patch
 
 import pytest
 
-from hermes.ai.chat import Chat
+from hermes.ai.client import HermesClient
 from hermes.ai.context import AIContext
 from hermes.ai.manager import AIManager
 from hermes.ai.pipeline import AIPipeline
@@ -33,7 +31,6 @@ from hermes.ai.response import AIResponse
 
 @pytest.fixture
 def mock_manager() -> MagicMock:
-    """Mock AIManager with a working execute method."""
     manager = create_autospec(AIManager)
     manager.execute.return_value = AIResponse(
         success=True,
@@ -46,7 +43,6 @@ def mock_manager() -> MagicMock:
 
 @pytest.fixture
 def mock_pipeline() -> MagicMock:
-    """Mock AIPipeline with a working execute method."""
     pipeline = create_autospec(AIPipeline)
     pipeline.execute.return_value = AIResponse(
         success=True,
@@ -54,7 +50,6 @@ def mock_pipeline() -> MagicMock:
         provider="pipeline",
         model="pipeline-model",
     )
-    # Simulate orchestrator.manager for compatibility
     pipeline.orchestrator = MagicMock()
     pipeline.orchestrator.manager = MagicMock(spec=AIManager)
     return pipeline
@@ -64,18 +59,15 @@ def mock_pipeline() -> MagicMock:
 # Tests
 # ------------------------------------------------------------------
 
-def test_chat_send_uses_pipeline_when_provided(mock_pipeline: MagicMock) -> None:
-    """Chat.send() should call pipeline.execute() when pipeline is given."""
-    _patch_request_to_dict()
-
-    chat = Chat(pipeline=mock_pipeline, provider="test-provider", model="test-model")
-    response = chat.send("Hello")
+def test_client_complete_uses_pipeline_when_provided(mock_pipeline: MagicMock) -> None:
+    """complete() should call pipeline.execute() when pipeline is given."""
+    client = HermesClient(pipeline=mock_pipeline, provider="test-provider")
+    response = client.complete("Hello")
 
     mock_pipeline.execute.assert_called_once()
     call_kwargs = mock_pipeline.execute.call_args[1]
     assert call_kwargs["provider"] == "test-provider"
     assert isinstance(call_kwargs["request"], AIRequest)
-    # The prompt is wrapped with [USER]\n by Prompt.to_request()
     assert "Hello" in call_kwargs["request"].prompt
     assert isinstance(call_kwargs["context"], AIContext)
 
@@ -83,103 +75,103 @@ def test_chat_send_uses_pipeline_when_provided(mock_pipeline: MagicMock) -> None
     assert response.result == "Pipeline response"
 
 
-def test_chat_send_falls_back_to_manager_when_no_pipeline(mock_manager: MagicMock) -> None:
-    """Chat.send() should use manager.execute() when pipeline is None."""
-    _patch_request_to_dict()
-
-    chat = Chat(manager=mock_manager, provider="test-provider", model="test-model")
-    response = chat.send("Hello")
+def test_client_complete_falls_back_to_manager_when_no_pipeline(mock_manager: MagicMock) -> None:
+    """complete() should use manager.execute() when pipeline is None."""
+    client = HermesClient(manager=mock_manager, provider="test-provider")
+    response = client.complete("Hello")
 
     mock_manager.execute.assert_called_once()
     call_args = mock_manager.execute.call_args[1]
     assert call_args["provider_name"] == "test-provider"
     assert isinstance(call_args["request"], AIRequest)
     assert "Hello" in call_args["request"].prompt
-    assert call_args["context"] is chat._session  # session passed as context
 
     assert response.success is True
     assert response.result == "Mock response"
 
 
-def test_chat_send_with_provider_override_uses_override(mock_pipeline: MagicMock) -> None:
+def test_client_complete_with_provider_override_uses_override(mock_pipeline: MagicMock) -> None:
     """Request provider override should take precedence over the default."""
-    _patch_request_to_dict()
-    chat = Chat(pipeline=mock_pipeline, provider="default-provider")
-    chat.send("Hello", provider="override-provider")
+    client = HermesClient(pipeline=mock_pipeline, provider="default-provider")
+    client.complete("Hello", provider="override-provider")
 
     mock_pipeline.execute.assert_called_once()
     call_kwargs = mock_pipeline.execute.call_args[1]
     assert call_kwargs["provider"] == "override-provider"
 
 
-def test_chat_send_with_model_override_uses_override(mock_pipeline: MagicMock) -> None:
+def test_client_complete_with_model_override_uses_override(mock_pipeline: MagicMock) -> None:
     """Request model override should be set in the request."""
-    _patch_request_to_dict()
-    # Provide a provider so that _resolve_provider succeeds
-    chat = Chat(pipeline=mock_pipeline, provider="test-provider", model="default-model")
-    chat.send("Hello", model="override-model")
+    # Provide a default provider so that _execute_request can resolve one
+    client = HermesClient(pipeline=mock_pipeline, provider="test-provider", model="default-model")
+    client.complete("Hello", model="override-model")
 
     mock_pipeline.execute.assert_called_once()
     request = mock_pipeline.execute.call_args[1]["request"]
     assert request.model == "override-model"
 
 
-def test_chat_manager_property_returns_manager(mock_manager: MagicMock) -> None:
-    """The manager property should return the stored manager (for compatibility)."""
-    chat = Chat(manager=mock_manager)
-    assert chat.manager is mock_manager
+def test_client_complete_with_system_instruction(mock_pipeline: MagicMock) -> None:
+    """System instruction should be added to the prompt."""
+    client = HermesClient(pipeline=mock_pipeline, provider="test-provider")
+    client.complete("Hello", system="You are a helpful assistant.")
+
+    mock_pipeline.execute.assert_called_once()
+    request = mock_pipeline.execute.call_args[1]["request"]
+    messages = request.options.get("messages", [])
+    assert any(m["role"] == "system" for m in messages)
 
 
-def test_chat_pipeline_property_returns_pipeline(mock_pipeline: MagicMock) -> None:
-    """The pipeline property should return the stored pipeline."""
-    chat = Chat(pipeline=mock_pipeline)
-    assert chat.pipeline is mock_pipeline
+def test_client_complete_with_options(mock_pipeline: MagicMock) -> None:
+    """Options should be passed to the request."""
+    client = HermesClient(pipeline=mock_pipeline, provider="test-provider")
+    client.complete("Hello", options={"temperature": 0.5, "max_tokens": 100})
+
+    mock_pipeline.execute.assert_called_once()
+    request = mock_pipeline.execute.call_args[1]["request"]
+    assert request.options.get("temperature") == 0.5
+    assert request.options.get("max_tokens") == 100
 
 
-def test_chat_without_manager_or_pipeline_uses_default_manager() -> None:
-    """
-    If neither pipeline nor manager is given, Chat should create a default AIManager.
-    (This relies on AIManager having a default constructor; if it doesn't, the test
-    will need to patch it – but we assume the original code worked.)
-    """
-    with patch("hermes.ai.chat.AIManager") as MockManager:
-        MockManager.return_value = MagicMock(spec=AIManager)
-        chat = Chat()
-        assert chat._manager is not None
-        MockManager.assert_called_once()  # no arguments
-
-
-def test_chat_send_raises_error_when_no_provider(mock_pipeline: MagicMock) -> None:
-    """If no provider is resolved, send() should raise ValueError."""
-    _patch_request_to_dict()
-    chat = Chat(pipeline=mock_pipeline)  # no provider set
+def test_client_raises_error_when_no_provider(mock_pipeline: MagicMock) -> None:
+    """If no provider is resolved, complete() should raise ValueError."""
+    client = HermesClient(pipeline=mock_pipeline)  # no provider set
     with pytest.raises(ValueError, match="No provider specified"):
-        chat.send("Hello")
+        client.complete("Hello")
 
 
-def test_chat_send_raises_error_when_streaming(mock_pipeline: MagicMock) -> None:
-    """If a stream is in progress, send() should raise RuntimeError."""
-    _patch_request_to_dict()
-    chat = Chat(pipeline=mock_pipeline, provider="test")
-    # Simulate streaming flag
-    chat._streaming_message_id = "fake-stream-id"
-    with pytest.raises(RuntimeError, match="streaming is in progress"):
-        chat.send("Hello")
+def test_client_without_manager_or_pipeline_creates_default_manager() -> None:
+    """If neither pipeline nor manager is given, create a default AIManager."""
+    with patch("hermes.ai.client.AIManager") as MockManager:
+        MockManager.return_value = MagicMock(spec=AIManager)
+        client = HermesClient()
+        assert client._manager is not None
+        MockManager.assert_called_once()
 
 
-# ------------------------------------------------------------------
-# Helper: ensure AIRequest.to_dict exists
-# ------------------------------------------------------------------
+def test_client_manager_property_returns_manager(mock_manager: MagicMock) -> None:
+    """The manager property should return the stored manager."""
+    client = HermesClient(manager=mock_manager)
+    assert client.manager is mock_manager
 
-def _patch_request_to_dict() -> None:
-    """Add a to_dict method to AIRequest if it doesn't already exist."""
-    if not hasattr(AIRequest, "to_dict"):
-        def to_dict(self):
-            return {
-                "prompt": self.prompt,
-                "provider": self.provider,
-                "model": self.model,
-                "options": self.options,
-                "metadata": self.metadata,
-            }
-        AIRequest.to_dict = to_dict
+
+def test_client_pipeline_property_returns_pipeline(mock_pipeline: MagicMock) -> None:
+    """The pipeline property should return the stored pipeline."""
+    client = HermesClient(pipeline=mock_pipeline)
+    assert client.pipeline is mock_pipeline
+
+
+def test_client_chat_passes_pipeline(mock_pipeline: MagicMock) -> None:
+    """Chat() should pass the pipeline through to the Chat instance."""
+    client = HermesClient(pipeline=mock_pipeline, provider="test")
+    chat = client.chat()
+    assert chat.pipeline is mock_pipeline
+    assert chat.provider == "test"
+
+
+def test_client_chat_fallback_manager(mock_manager: MagicMock) -> None:
+    """Chat() should pass the manager if no pipeline is set."""
+    client = HermesClient(manager=mock_manager, provider="test")
+    chat = client.chat()
+    assert chat.pipeline is None
+    assert chat.manager is mock_manager

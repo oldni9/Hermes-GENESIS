@@ -5,12 +5,12 @@ Hermes AI Client
 High-level public API entry point for Hermes.
 
 Owns:
-    - AIManager
+    - AIPipeline (preferred) or AIManager (deprecated)
     - Default provider/model configuration
     - Registry access
 
 Creates:
-    - Chat objects
+    - Chat objects (with pipeline)
     - Sessions
     - Conversations
     - Requests
@@ -20,9 +20,9 @@ Provides:
     - Provider selection
     - Provider listing
     - Model listing
-    - One-shot completion API
-    - Streaming API
-    - Embedding API delegation
+    - One-shot completion API (complete / stream)
+    - Streaming API (via Chat)
+    - Embedding API delegation (future)
     - Future-compatible memory/tool integration
 
 Author:
@@ -33,6 +33,7 @@ Author:
 from __future__ import annotations
 
 import json
+import warnings
 from dataclasses import dataclass, field
 from typing import Any, Generator, Self
 
@@ -46,6 +47,8 @@ from hermes.ai.request import AIRequest
 from hermes.ai.response import AIResponse
 from hermes.ai.session import AISession, SessionConfig
 from hermes.ai.metadata import AIMetadata
+from hermes.ai.pipeline import AIPipeline
+from hermes.ai.context import AIContext
 
 
 # =============================================================================
@@ -171,32 +174,60 @@ class HermesClient:
 
     def __init__(
         self,
+        pipeline: AIPipeline | None = None,
         manager: AIManager | None = None,
         provider: str | None = None,
         model: str | None = None,
         config: ClientConfig | None = None,
+        memory: Any = None,
+        tool_manager: Any = None,
     ):
         """
         Initialize the Hermes client.
 
         Parameters
         ----------
+        pipeline : AIPipeline | None, optional
+            AI Pipeline instance (preferred). If provided, all non‑streaming
+            requests go through the pipeline.
         manager : AIManager | None, optional
-            AI Manager instance. If None, a new one is created.
+            AI Manager instance (deprecated). Used only if pipeline is not provided.
         provider : str | None, optional
             Default provider name.
         model : str | None, optional
             Default model name.
         config : ClientConfig | None, optional
             Client configuration.
+        memory : Any, optional
+            Memory system instance (reserved for future use).
+        tool_manager : Any, optional
+            Tool manager instance (reserved for future use).
         """
-        self._manager = manager or AIManager()
-        self._config = config or ClientConfig()
+        # Determine pipeline
+        if pipeline is not None:
+            self._pipeline = pipeline
+            self._manager = pipeline.orchestrator.manager
+        elif manager is not None:
+            warnings.warn(
+                "Passing 'manager' to HermesClient is deprecated; use 'pipeline' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            self._pipeline = None
+            self._manager = manager
+        else:
+            # No pipeline, no manager: create a default manager
+            self._pipeline = None
+            self._manager = AIManager()
 
+        self._config = config or ClientConfig()
         if provider is not None:
             self._config.provider = provider
         if model is not None:
             self._config.model = model
+
+        self._memory = memory
+        self._tool_manager = tool_manager
 
         # Validate initial provider/model if set
         self._validate_provider_model()
@@ -207,8 +238,13 @@ class HermesClient:
 
     @property
     def manager(self) -> AIManager:
-        """Get the AI manager."""
+        """Get the AI manager (deprecated)."""
         return self._manager
+
+    @property
+    def pipeline(self) -> AIPipeline | None:
+        """Get the AI pipeline, if set."""
+        return self._pipeline
 
     @property
     def registry(self) -> AIRegistry:
@@ -229,6 +265,16 @@ class HermesClient:
     def config(self) -> ClientConfig:
         """Get the client configuration."""
         return self._config
+
+    @property
+    def memory(self) -> Any:
+        """Get the memory system."""
+        return self._memory
+
+    @property
+    def tool_manager(self) -> Any:
+        """Get the tool manager."""
+        return self._tool_manager
 
     # ------------------------------------------------------------------
     # Validation
@@ -420,8 +466,10 @@ class HermesClient:
         Chat
             A new Chat instance.
         """
+        # Do not pass memory/tool_manager – Chat does not accept them yet.
         return Chat(
-            manager=self._manager,
+            pipeline=self._pipeline,
+            manager=self._manager if self._pipeline is None else None,
             provider=self._config.provider,
             model=self._config.model,
             conversation=conversation,
@@ -592,8 +640,20 @@ class HermesClient:
         )
 
     # ------------------------------------------------------------------
-    # Execution
+    # Internal Helpers
     # ------------------------------------------------------------------
+
+    def _build_context(self) -> AIContext:
+        """
+        Build an AIContext for the request.
+
+        This will be extended in later PRs to include memory, tools, etc.
+        Currently, AIContext does not accept memory/tool_manager, so we omit them.
+        """
+        return AIContext(
+            provider=self._config.provider,
+            model=self._config.model,
+        )
 
     def _prepare_request(
         self,
@@ -656,7 +716,7 @@ class HermesClient:
 
     def _execute_request(self, request: AIRequest) -> AIResponse:
         """
-        Execute a request via the manager.
+        Execute a request using either the pipeline (if available) or the manager.
 
         Parameters
         ----------
@@ -676,10 +736,20 @@ class HermesClient:
         provider_name = request.provider
         if not provider_name:
             raise ValueError("No provider specified. Set a default provider or pass one.")
-        return self._manager.execute(
-            provider_name=provider_name,
-            request=request,
-        )
+
+        if self._pipeline is not None:
+            context = self._build_context()
+            return self._pipeline.execute(
+                provider=provider_name,
+                request=request,
+                context=context,
+                use_cache=True,
+            )
+        else:
+            return self._manager.execute(
+                provider_name=provider_name,
+                request=request,
+            )
 
     # ------------------------------------------------------------------
     # One-shot Completion
@@ -885,43 +955,3 @@ class HermesClient:
 
     def __str__(self) -> str:
         return self.__repr__()
-
-
-# =============================================================================
-# Verification Block
-# =============================================================================
-
-# ✓ Classes:
-#   - ClientConfig
-#   - HermesClient
-
-# ✓ Methods:
-#   - __init__
-#   - set_provider / set_model / set_config (with validation)
-#   - list_providers / list_provider_names / list_models / get_provider
-#   - chat
-#   - create_session / create_conversation / create_prompt / create_request
-#   - complete / stream (unified execution path)
-#   - embed (placeholder with clear error)
-#   - to_dict / from_dict / to_json / from_json
-#   - context manager (__enter__ / __exit__)
-#   - magic methods (__repr__, __str__)
-
-# ✓ Serialization:
-#   - to_dict / from_dict (single source of truth)
-#   - to_json / from_json
-
-# ✓ Imports:
-#   - All imports are valid
-#   - No circular imports
-
-# ✓ Compatibility:
-#   - Works with AIManager, AIRegistry, Chat, AISession, AIConversation, Prompt, AIRequest, AIResponse
-#   - Future-compatible with memory and tools
-
-# ✓ Improvements:
-#   - Provider validation on set
-#   - Config applied to requests via apply_to_request()
-#   - Unified request preparation and execution
-#   - list_models uses provider method or metadata
-#   - No duplication of provider/model in serialization
