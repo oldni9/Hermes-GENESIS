@@ -470,6 +470,8 @@ class Chat:
             conversation_id=self._conversation.id,
             provider=self.provider,
             model=self.model,
+            session=self._session,
+            conversation=self._conversation,
         )
 
     def _resolve_provider(self, request: AIRequest) -> str:

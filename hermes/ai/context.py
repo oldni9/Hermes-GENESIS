@@ -34,6 +34,35 @@ class AIContext:
     It does not contain business logic.
 
     It does not know about specific capabilities.
+
+    Attributes
+    ----------
+    request_id : str | None
+        Unique request identifier.
+    session_id : str | None
+        Identifier of the AISession owning this request.
+    user_id : str | None
+        User identifier.
+    conversation_id : str | None
+        Identifier of the AIConversation.
+    provider : str | None
+        Provider name used for execution.
+    model : str | None
+        Model name used for execution.
+    timeout : float | None
+        Execution timeout in seconds.
+    priority : int
+        Execution priority (higher = more urgent).
+    metadata : dict[str, Any]
+        Arbitrary metadata.
+    session : Any
+        Reference to the AISession object (if available).
+    conversation : Any
+        Reference to the AIConversation object (if available).
+    memory : Any
+        Reference to a Memory system instance.
+    tool_manager : Any
+        Reference to a ToolManager instance.
     """
 
     # ------------------------------------------------------------------
@@ -64,9 +93,16 @@ class AIContext:
     # Metadata
     # ------------------------------------------------------------------
 
-    metadata: dict[str, Any] = field(
-        default_factory=dict,
-    )
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    # ------------------------------------------------------------------
+    # Integration: Session, Conversation, Memory, Tools
+    # ------------------------------------------------------------------
+
+    session: Any = None
+    conversation: Any = None
+    memory: Any = None
+    tool_manager: Any = None
 
     # ------------------------------------------------------------------
     # Metadata Access
@@ -169,6 +205,10 @@ class AIContext:
             timeout=self.timeout,
             priority=self.priority,
             metadata=deepcopy(self.metadata),
+            session=self.session,          # shallow copy; objects are shared
+            conversation=self.conversation,
+            memory=self.memory,
+            tool_manager=self.tool_manager,
         )
 
     # ------------------------------------------------------------------
