@@ -21,62 +21,29 @@ class Hermes:
     """
 
     def __init__(self) -> None:
-
         self.runtime = RuntimeEngine()
-
         self._started = False
-
         self._shutdown = False
 
     # ------------------------------------------------------------------
-
     def start(self) -> None:
-        """
-        Start Hermes.
-        """
-
         if self._shutdown:
-            raise RuntimeError(
-                "Hermes has already been shut down."
-            )
-
+            raise RuntimeError("Hermes has already been shut down.")
         if self._started:
             return
-
         self._started = True
 
     # ------------------------------------------------------------------
-
     def shutdown(self) -> None:
-        """
-        Shutdown Hermes.
-        """
-
         if self._shutdown:
             return
-
         self._started = False
-
         self._shutdown = True
 
     # ------------------------------------------------------------------
-
-    def run(
-        self,
-        prompt: str,
-    ) -> HermesResponse:
-        """
-        Execute a prompt.
-        """
-
+    def run(self, prompt: str) -> HermesResponse:
         if self._shutdown:
-            raise RuntimeError(
-                "Cannot execute after Hermes has been shut down."
-            )
-
+            raise RuntimeError("Cannot execute after Hermes has been shut down.")
         if not self._started:
             self.start()
-
-        return self.runtime.execute(
-            prompt,
-        )
+        return self.runtime.execute(prompt)

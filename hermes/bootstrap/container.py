@@ -21,6 +21,10 @@ class HermesContainer:
 
     def __init__(self) -> None:
 
+        # ------------------------------------------------------------------
+        # Legacy Subsystems
+        # ------------------------------------------------------------------
+
         self.provider_registry = ProviderRegistry()
 
         self.provider_manager = None
@@ -30,3 +34,41 @@ class HermesContainer:
         self.kernel_executor = None
 
         self.runtime_engine = None
+
+        # ------------------------------------------------------------------
+        # AI Subsystem
+        # ------------------------------------------------------------------
+
+        self.ai_registry = None
+
+        self.ai_manager = None
+
+        self.ai_router = None
+
+        self.ai_pipeline = None
+
+        self.tool_registry = None
+
+        self.tool_manager = None
+
+        # ------------------------------------------------------------------
+        # Conversation & Sessions
+        # ------------------------------------------------------------------
+
+        self.session_manager = None
+
+        self.conversation_prompt_builder = None
+
+        self.request_builder = None
+
+        # ------------------------------------------------------------------
+        # Orchestrator (Sprint 1)
+        # ------------------------------------------------------------------
+
+        self.provider_selector = None
+
+        self.response_processor = None
+
+        self.retry_policy = None
+
+        self.orchestrator = None

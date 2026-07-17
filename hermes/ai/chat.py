@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import json
 import time
+import warnings
 from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass, field
@@ -52,12 +53,14 @@ from typing import Any, Callable, Generator, Self, overload
 from hermes.ai.conversation import AIConversation, ConversationMessage, ConversationState
 from hermes.ai.session import AISession, SessionState, SessionConfig
 from hermes.ai.request import AIRequest
+from hermes.ai.context import AIContext
 from hermes.ai.response import AIResponse, ResponseChunk
 from hermes.ai.prompt import Prompt, PromptRole
 from hermes.ai.manager import AIManager
 from hermes.ai.registry import AIRegistry
 from hermes.ai.provider import BaseAIProvider
 from hermes.ai.metadata import AIMetadata
+from hermes.ai.pipeline import AIPipeline
 
 
 # =============================================================================
@@ -219,6 +222,7 @@ class Chat:
 
     def __init__(
         self,
+        pipeline: AIPipeline | None = None,
         manager: AIManager | None = None,
         provider: str | None = None,
         model: str | None = None,
@@ -233,8 +237,12 @@ class Chat:
 
         Parameters
         ----------
+        pipeline : AIPipeline | None, optional
+            AI Pipeline instance (preferred). If provided, all non-streaming
+            requests go through the pipeline.
         manager : AIManager | None, optional
-            AI Manager instance. If None, a new one is created.
+            AI Manager instance (deprecated). Used only if pipeline is not
+            provided, or for streaming (until streaming is migrated).
         provider : str | None, optional
             Default provider name.
         model : str | None, optional
@@ -250,7 +258,23 @@ class Chat:
         tags : list[str] | None, optional
             Initial tags.
         """
-        self._manager = manager or AIManager()
+        self._pipeline = pipeline
+
+        # Handle manager (deprecated)
+        if manager is not None and pipeline is None:
+            warnings.warn(
+                "Passing 'manager' to Chat is deprecated; use 'pipeline' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            self._manager = manager
+        elif pipeline is not None:
+            # If pipeline is given, use its manager for compatibility
+            self._manager = pipeline.orchestrator.manager
+        else:
+            # No pipeline, no manager: create a default manager
+            self._manager = AIManager()
+
         self._provider = provider
         self._model = model
 
@@ -290,8 +314,13 @@ class Chat:
 
     @property
     def manager(self) -> AIManager:
-        """Get the AI manager."""
+        """Get the AI manager (deprecated)."""
         return self._manager
+
+    @property
+    def pipeline(self) -> AIPipeline | None:
+        """Get the AI pipeline, if set."""
+        return self._pipeline
 
     @property
     def provider(self) -> str | None:
@@ -425,6 +454,42 @@ class Chat:
             ]
         return self
 
+    # ------------------------------------------------------------------
+    # Internal Helpers
+    # ------------------------------------------------------------------
+
+    def _build_context(self) -> AIContext:
+        """
+        Build an AIContext for the current request.
+
+        Includes conversation and session data. This will be extended in later
+        PRs to include memory, tools, etc.
+        """
+        return AIContext(
+            session_id=self._session.id,
+            conversation_id=self._conversation.id,
+            provider=self.provider,
+            model=self.model,
+        )
+
+    def _resolve_provider(self, request: AIRequest) -> str:
+        """
+        Resolve the provider name from the request, falling back to self.provider.
+
+        Raises
+        ------
+        ValueError
+            If no provider can be resolved.
+        """
+        provider_name = request.provider or self.provider
+        if not provider_name:
+            raise ValueError("No provider specified. Set provider or pass provider.")
+        return provider_name
+
+    # ------------------------------------------------------------------
+    # Event Hooks (continued)
+    # ------------------------------------------------------------------
+
     def _emit_event(self, event_type: str, data: dict[str, Any] | None = None) -> None:
         """Emit an event to all registered listeners."""
         for callback in self._event_listeners.get(event_type, []):
@@ -519,16 +584,23 @@ class Chat:
         # Emit event
         self._emit_event("message_sent", {"message": message, "request": request.to_dict()})
 
-        # Execute
+        # Execute via pipeline (if available) or fallback to manager
         try:
-            provider_name = request.provider or self.provider
-            if not provider_name:
-                raise ValueError("No provider specified. Set provider or pass provider.")
-            response = self._manager.execute(
-                provider_name=provider_name,
-                request=request,
-                context=self._session,
-            )
+            provider_name = self._resolve_provider(request)
+            context = self._build_context()
+
+            if self._pipeline is not None:
+                response = self._pipeline.execute(
+                    provider=provider_name,
+                    request=request,
+                    context=context,
+                )
+            else:
+                response = self._manager.execute(
+                    provider_name=provider_name,
+                    request=request,
+                    context=self._session,
+                )
         except Exception as e:
             self._statistics.failed_requests += 1
             self._emit_event("error", {"error": str(e)})
@@ -895,28 +967,18 @@ class Chat:
 #   - Chat
 
 # ✓ Methods:
-#   - __init__
+#   - __init__ (added pipeline, manager still present)
 #   - set_provider / set_model / set_config
 #   - on / off
-#   - send / stream
-#   - retry
+#   - send (now routes through pipeline if available)
+#   - stream (unchanged)
+#   - retry (unchanged)
 #   - clear_history / reset
 #   - export_dict / import_dict / export_json / import_json
 #   - context manager (__enter__ / __exit__)
 #   - magic methods (__len__, __iter__, __getitem__, __repr__, __str__)
 
-# ✓ Serialization:
-#   - export_dict / import_dict
-#   - export_json / import_json
-
-# ✓ Validation:
-#   - Provider presence validation in send/stream
-#   - Streaming conflict detection
-
-# ✓ Imports:
-#   - all imports from Hermes modules are valid
-#   - no circular imports (uses only public APIs)
-
-# ✓ Compatibility:
-#   - Works with AIConversation, AISession, AIRequest, AIResponse, AIManager
-#   - Future-compatible with Memory and Tool systems
+# ✓ Serialization: unchanged
+# ✓ Validation: unchanged
+# ✓ Imports: added AIContext, AIPipeline
+# ✓ Compatibility: manager parameter still supported, pipeline is additive

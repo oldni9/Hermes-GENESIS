@@ -4,13 +4,14 @@ Hermes AI Pipeline
 
 Orchestrates AI execution.
 
+Now delegates to AIOrchestrator and supports middleware.
+
 Does NOT perform AI.
-
 Does NOT know OCR, Vision, Speech, Embeddings, or Chat.
-
 Only coordinates:
-    - AIManager
     - AICache
+    - AIOrchestrator
+    - Middleware
     - AIRequest
     - AIResponse
     - AIContext
@@ -22,18 +23,21 @@ Author:
 
 from __future__ import annotations
 
+from typing import Generator, List, Optional
+
 from hermes.ai.cache import AICache
 from hermes.ai.context import AIContext
-from hermes.ai.manager import AIManager
+from hermes.ai.orchestrator import AIOrchestrator, ExecutionPlan
 from hermes.ai.request import AIRequest
-from hermes.ai.response import AIResponse
+from hermes.ai.response import AIResponse, ResponseChunk
+from hermes.ai.middleware import BaseMiddleware, MiddlewareChain, MiddlewareContext, MiddlewareShortCircuit
 
 
 class AIPipeline:
     """
     Orchestrates AI execution.
 
-    The pipeline coordinates caching and execution.
+    The pipeline coordinates caching, middleware, and orchestration.
 
     It does not know about specific capabilities.
 
@@ -44,49 +48,131 @@ class AIPipeline:
 
     def __init__(
         self,
-        manager: AIManager,
+        orchestrator: AIOrchestrator,
         cache: AICache | None = None,
+        middlewares: List[BaseMiddleware] | None = None,
     ) -> None:
         """
         Initialize the AI pipeline.
 
         Parameters
         ----------
-        manager : AIManager
-            The AI manager to use for execution.
+        orchestrator : AIOrchestrator
+            The orchestrator for execution.
         cache : AICache | None, optional
             Cache instance. If None, a new cache is created.
+        middlewares : List[BaseMiddleware] | None, optional
+            List of middleware to apply to every request.
         """
-
-        self._manager = manager
-
-        if cache is None:
-            self._cache = AICache()
-        else:
-            self._cache = cache
+        self._orchestrator = orchestrator
+        self._cache = cache or AICache()
+        self._middleware_chain = MiddlewareChain(middlewares)
 
     # ------------------------------------------------------------------
     # Properties
     # ------------------------------------------------------------------
 
     @property
-    def manager(self) -> AIManager:
-        """
-        Return the underlying AI manager.
-        """
-
-        return self._manager
+    def orchestrator(self) -> AIOrchestrator:
+        """Return the underlying orchestrator."""
+        return self._orchestrator
 
     @property
     def cache(self) -> AICache:
-        """
-        Return the underlying AI cache.
-        """
-
+        """Return the underlying cache."""
         return self._cache
 
+    @property
+    def middleware_chain(self) -> MiddlewareChain:
+        """Return the middleware chain."""
+        return self._middleware_chain
+
+    def add_middleware(self, middleware: BaseMiddleware) -> None:
+        """
+        Add a middleware to the chain.
+
+        Parameters
+        ----------
+        middleware : BaseMiddleware
+            The middleware to add.
+        """
+        self._middleware_chain.add(middleware)
+
     # ------------------------------------------------------------------
-    # Execution
+    # Internal execution (shared by execute and execute_default)
+    # ------------------------------------------------------------------
+
+    def _execute_with_middleware(
+        self,
+        provider: str | None,
+        request: AIRequest,
+        context: AIContext | None = None,
+        *,
+        use_cache: bool = True,
+        cache_ttl: float | None = None,
+    ) -> AIResponse:
+        """
+        Internal execution that applies cache, middleware, and orchestration.
+
+        This is the common path for both execute() and execute_default().
+        """
+        # 1. Cache lookup
+        if use_cache:
+            cached = self._cache.get(request)
+            if cached is not None:
+                return cached
+
+        # 2. Build middleware context
+        ctx = MiddlewareContext(
+            request=request,
+            context=context,
+            metadata={},
+        )
+
+        # 3. Execute before hooks
+        try:
+            self._middleware_chain.execute_before(ctx)
+        except MiddlewareShortCircuit:
+            if ctx.response is None:
+                raise RuntimeError(
+                    "Middleware short‑circuited but no response was set."
+                )
+            return ctx.response
+
+        # Use possibly modified request
+        request = ctx.request
+
+        # 4. Build execution plan
+        plan = ExecutionPlan(
+            provider=provider,
+            use_cache=use_cache,
+            cache_ttl=cache_ttl,
+        )
+
+        # 5. Execute via orchestrator
+        response = self._orchestrator.execute(
+            request=request,
+            plan=plan,
+            context=context,
+        )
+
+        # 6. Store response in context for after hooks
+        ctx.response = response
+
+        # 7. Execute after hooks
+        self._middleware_chain.execute_after(ctx)
+
+        # 8. Use possibly modified response
+        response = ctx.response
+
+        # 9. Store in cache
+        if use_cache and response.success:
+            self._cache.store(request, response, ttl=cache_ttl)
+
+        return response
+
+    # ------------------------------------------------------------------
+    # Public execution methods
     # ------------------------------------------------------------------
 
     def execute(
@@ -112,7 +198,7 @@ class AIPipeline:
         use_cache : bool, default=True
             Whether to use the cache.
         cache_ttl : float | None, optional
-            Time-to-live for cached response. None means never expire.
+            Time-to-live for cached response.
 
         Returns
         -------
@@ -124,32 +210,13 @@ class AIPipeline:
         KeyError
             If provider does not exist.
         """
-
-        # Check cache first
-        if use_cache:
-            cached = self._cache.get(request)
-
-            if cached is not None:
-                return cached
-
-        # Execute through manager
-        response = self._manager.execute(
-            provider_name=provider,
+        return self._execute_with_middleware(
+            provider=provider,
             request=request,
             context=context,
+            use_cache=use_cache,
+            cache_ttl=cache_ttl,
         )
-
-        # Store in cache if enabled and successful
-        if use_cache and response.success:
-            self._cache.store(
-                request=request,
-                response=response,
-                ttl=cache_ttl,
-            )
-
-        return response
-
-    # ------------------------------------------------------------------
 
     def execute_default(
         self,
@@ -174,7 +241,7 @@ class AIPipeline:
         use_cache : bool, default=True
             Whether to use the cache.
         cache_ttl : float | None, optional
-            Time-to-live for cached response. None means never expire.
+            Time-to-live for cached response.
 
         Returns
         -------
@@ -186,158 +253,90 @@ class AIPipeline:
         RuntimeError
             If no provider supports the capability.
         """
+        # Set task if not already set
+        if not request.task:
+            request.task = capability
 
-        # Check cache first
-        if use_cache:
-            cached = self._cache.get(request)
-
-            if cached is not None:
-                return cached
-
-        # Execute through manager
-        response = self._manager.execute_default(
-            capability=capability,
+        return self._execute_with_middleware(
+            provider=None,  # orchestrator will select default provider
             request=request,
             context=context,
+            use_cache=use_cache,
+            cache_ttl=cache_ttl,
         )
 
-        # Store in cache if enabled and successful
-        if use_cache and response.success:
-            self._cache.store(
-                request=request,
-                response=response,
-                ttl=cache_ttl,
-            )
-
-        return response
-
+    # ------------------------------------------------------------------
+    # Streaming (unchanged – will be enhanced in a later PR)
     # ------------------------------------------------------------------
 
-    def batch_execute(
+    def stream(
         self,
         provider: str,
-        requests: list[AIRequest],
+        request: AIRequest,
         context: AIContext | None = None,
         *,
-        use_cache: bool = True,
+        use_cache: bool = False,
         cache_ttl: float | None = None,
-    ) -> list[AIResponse]:
+    ) -> Generator[ResponseChunk, None, AIResponse]:
         """
-        Execute multiple requests using a specific provider.
+        Execute a request with streaming using a specific provider.
 
         Parameters
         ----------
         provider : str
             Name of the provider to use.
-        requests : list[AIRequest]
-            List of requests to execute.
+        request : AIRequest
+            The request to execute.
         context : AIContext | None, optional
             Optional execution context.
-        use_cache : bool, default=True
-            Whether to use the cache.
+        use_cache : bool, default=False
+            Whether to use the cache (not recommended for streaming).
         cache_ttl : float | None, optional
-            Time-to-live for cached responses. None means never expire.
+            Time-to-live for cached response.
+
+        Yields
+        ------
+        ResponseChunk
+            Partial response chunks.
 
         Returns
         -------
-        list[AIResponse]
-            List of responses from the provider or cache.
-
-        Raises
-        ------
-        KeyError
-            If provider does not exist.
+        AIResponse
+            The final assembled response.
         """
+        # For now, we bypass middleware and cache for streaming.
+        # This will be enhanced in a future PR.
+        plan = ExecutionPlan(
+            provider=provider,
+            use_cache=False,
+            cache_ttl=cache_ttl,
+        )
 
-        # If cache is disabled, delegate directly to manager
-        if not use_cache:
-            return self._manager.batch_execute(
-                provider_name=provider,
-                requests=requests,
-                context=context,
-            )
+        final_response = yield from self._orchestrator.stream(
+            request=request,
+            plan=plan,
+            context=context,
+        )
 
-        responses: list[AIResponse | None] = []
+        if use_cache and final_response.success:
+            self._cache.store(request, final_response, ttl=cache_ttl)
 
-        # Track which requests need execution
-        to_execute: list[int] = []
-        executed_requests: list[AIRequest] = []
-
-        # Check cache for each request
-        for idx, request in enumerate(requests):
-            cached = self._cache.get(request)
-
-            if cached is not None:
-                responses.append(cached)
-            else:
-                # Mark for execution
-                to_execute.append(idx)
-                executed_requests.append(request)
-                responses.append(None)
-
-        # Execute uncached requests in batch
-        if executed_requests:
-            batch_responses = self._manager.batch_execute(
-                provider_name=provider,
-                requests=executed_requests,
-                context=context,
-            )
-
-            # Store and insert responses
-            for idx, request, response in zip(
-                to_execute,
-                executed_requests,
-                batch_responses,
-            ):
-                if response.success and use_cache:
-                    self._cache.store(
-                        request=request,
-                        response=response,
-                        ttl=cache_ttl,
-                    )
-
-                responses[idx] = response
-
-        # Filter out None values (should not happen after execution)
-        return [r for r in responses if r is not None]
+        return final_response
 
     # ------------------------------------------------------------------
     # Cache Management
     # ------------------------------------------------------------------
 
     def clear_cache(self) -> None:
-        """
-        Remove every entry from the cache.
-        """
-
+        """Remove every entry from the cache."""
         self._cache.clear()
 
-    # ------------------------------------------------------------------
-
     def cleanup_cache(self) -> int:
-        """
-        Remove every expired entry from the cache.
-
-        Returns
-        -------
-        int
-            Number of entries removed.
-        """
-
+        """Remove every expired entry from the cache."""
         return self._cache.cleanup()
 
-    # ------------------------------------------------------------------
-
     def cache_size(self) -> int:
-        """
-        Return the number of valid (non-expired) cache entries.
-
-        Returns
-        -------
-        int
-            Number of valid cache entries.
-        """
-
+        """Return the number of valid (non-expired) cache entries."""
         return self._cache.count()
 
     # ------------------------------------------------------------------
@@ -345,8 +344,5 @@ class AIPipeline:
     # ------------------------------------------------------------------
 
     def __len__(self) -> int:
-        """
-        Return the number of valid cache entries.
-        """
-
+        """Return the number of valid cache entries."""
         return self._cache.count()
