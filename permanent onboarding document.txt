@@ -1,0 +1,462 @@
+# Hermes Genesis – AI Contributor Onboarding Guide
+
+Version: 1.0
+Project: Hermes Genesis
+Status: Active Development
+
+===============================================================================
+MISSION
+===============================================================================
+
+You are NOT designing Hermes.
+
+Hermes already has an established architecture.
+
+Your responsibility is to CONTINUE it.
+
+Every decision must preserve stability, readability, extensibility and
+architectural consistency.
+
+If something already works,
+DO NOT redesign it.
+
+Build around it.
+
+===============================================================================
+PROJECT VISION
+===============================================================================
+
+Hermes Genesis is a modular AI Operating System.
+
+It is NOT simply an LLM wrapper.
+
+Its long-term goals include:
+
+• Multi-provider inference
+• Tool execution
+• Long-term memory
+• Planning
+• Runtime execution
+• Autonomous agents
+• Knowledge management
+• Scheduling
+• Plugin ecosystem
+
+Every subsystem should eventually become independently reusable.
+
+===============================================================================
+CORE PHILOSOPHY
+===============================================================================
+
+Hermes follows these engineering principles.
+
+1.
+
+Composition over inheritance.
+
+Never inherit unless absolutely necessary.
+
+2.
+
+Single Responsibility.
+
+Each class owns exactly one responsibility.
+
+3.
+
+One owner.
+
+A responsibility should never exist in two different places.
+
+4.
+
+Dependency Injection.
+
+Subsystems receive dependencies.
+
+They do NOT create them.
+
+5.
+
+Explicit is better than magic.
+
+No hidden side effects.
+
+6.
+
+Build around working systems.
+
+Never redesign green code.
+
+7.
+
+Every feature should have a clear execution path.
+
+8.
+
+Every abstraction should have a reason to exist.
+
+9.
+
+Maintain backwards compatibility whenever practical.
+
+10.
+
+Readability > cleverness.
+
+===============================================================================
+DEVELOPMENT RULES
+===============================================================================
+
+You MUST follow these rules.
+
+Rule 1
+
+Never redesign a subsystem that already passes tests.
+
+Rule 2
+
+Never rewrite working code simply because another implementation is "cleaner."
+
+Rule 3
+
+Never mix unrelated improvements inside one PR.
+
+Rule 4
+
+Every PR should solve ONE problem.
+
+Rule 5
+
+Never create duplicate execution paths.
+
+Rule 6
+
+Avoid temporary wrappers unless absolutely necessary.
+
+Rule 7
+
+Never break public APIs without approval.
+
+Rule 8
+
+Prefer extending existing abstractions.
+
+Rule 9
+
+Never introduce architectural shortcuts.
+
+Rule 10
+
+If uncertain,
+
+ask whether the change belongs in the current sprint.
+
+===============================================================================
+PROJECT LAYERS
+===============================================================================
+
+Hermes grows layer by layer.
+
+Do NOT skip layers.
+
+Current progression:
+
+Foundation
+
+↓
+
+Providers
+
+↓
+
+Registry
+
+↓
+
+Routing
+
+↓
+
+Pipeline
+
+↓
+
+Streaming
+
+↓
+
+Tools
+
+↓
+
+Memory
+
+↓
+
+Runtime
+
+↓
+
+Agents
+
+↓
+
+Planning
+
+↓
+
+Autonomy
+
+Future work should respect this progression.
+
+===============================================================================
+SPRINT PHILOSOPHY
+===============================================================================
+
+Hermes is developed through small, verifiable PR Sprints.
+
+Each Sprint must:
+
+• have one objective
+
+• modify the minimum number of files
+
+• preserve previous architecture
+
+• preserve previous tests
+
+• include new tests
+
+• include verification
+
+• include rollback strategy
+
+Never combine multiple architectural changes.
+
+===============================================================================
+FILE ORGANIZATION
+===============================================================================
+
+IMPORTANT
+
+Prefer folders over giant files.
+
+If a subsystem grows naturally into multiple responsibilities:
+
+GOOD
+
+tool/
+
+    manager.py
+
+    registry.py
+
+    schema.py
+
+    validator.py
+
+    executor.py
+
+    models.py
+
+BAD
+
+tool.py
+
+(3000+ lines containing everything)
+
+Exception:
+
+If a file is currently stable and splitting it risks regression,
+leave it intact until a dedicated refactor sprint.
+
+Stability always wins.
+
+===============================================================================
+MODIFICATION POLICY
+===============================================================================
+
+When changing code:
+
+Prefer:
+
+Add
+
+Extend
+
+Compose
+
+Avoid:
+
+Rewrite
+
+Redesign
+
+Replace
+
+Delete
+
+unless absolutely necessary.
+
+===============================================================================
+WHEN PROPOSING A PR
+===============================================================================
+
+Before writing code, explain:
+
+1.
+
+Why this PR belongs NOW.
+
+2.
+
+Why previous layers are sufficient.
+
+3.
+
+Why this change is isolated.
+
+4.
+
+Potential architectural risks.
+
+5.
+
+Rollback strategy.
+
+Only then begin implementation.
+
+===============================================================================
+IMPLEMENTATION FORMAT
+===============================================================================
+
+Every implementation should provide:
+
+1.
+
+Goal
+
+2.
+
+Architecture impact
+
+3.
+
+Files modified
+
+4.
+
+Files created
+
+5.
+
+Implementation
+
+6.
+
+Tests
+
+7.
+
+Verification checklist
+
+8.
+
+Rollback plan
+
+===============================================================================
+TESTING
+===============================================================================
+
+Every PR must preserve all previous tests.
+
+Never assume.
+
+Always verify.
+
+Expected workflow:
+
+Run pytest
+
+↓
+
+Fix failures
+
+↓
+
+Run again
+
+↓
+
+Green suite
+
+↓
+
+Only then continue.
+
+No PR is complete without green tests.
+
+===============================================================================
+ROLLBACK STRATEGY
+===============================================================================
+
+Every architectural change must be reversible.
+
+Prefer additive development.
+
+Avoid destructive development.
+
+If rollback is difficult,
+
+the design is probably too invasive.
+
+===============================================================================
+CURRENT DEVELOPMENT STYLE
+===============================================================================
+
+Hermes favors:
+
+small PRs
+
+incremental evolution
+
+strict architecture
+
+clear ownership
+
+long-term maintainability
+
+over rapid feature accumulation.
+
+===============================================================================
+WHAT NOT TO DO
+===============================================================================
+
+Never redesign because "it looks better."
+
+Never move files unnecessarily.
+
+Never introduce duplicate abstractions.
+
+Never ignore existing conventions.
+
+Never change unrelated files.
+
+Never optimize prematurely.
+
+Never sacrifice maintainability for cleverness.
+
+===============================================================================
+EXPECTED BEHAVIOR
+===============================================================================
+
+When working on Hermes:
+
+Think like a senior engineer joining an existing large codebase.
+
+Your goal is not to impress.
+
+Your goal is to preserve, extend and improve safely.
+
+Every decision should make Hermes easier to evolve one year from now.
