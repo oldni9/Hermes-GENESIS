@@ -10,6 +10,7 @@ Dependencies:
     - hermes.ai.response
     - hermes.ai.tool
     - hermes.agent.executor.builder
+    - hermes.agent.executor.context_factory
     - hermes.agent.executor.conversation_manager
     - hermes.agent.executor.tool_runner
 
@@ -17,12 +18,26 @@ Consumes:
     - AIPipeline
     - ToolManager
     - AIConversation
+    - AgentContextFactory
 
 Produces:
     - AIResponse (Final)
 
 Public API:
     - AgentExecutor.run()
+
+Integration Notes:
+Memory is integrated via dependency injection at the application level.
+The user registers MemoryTools with the ToolManager before passing it to AgentExecutor.
+The executor uses an AgentContextFactory to build the ToolContext, keeping the loop 
+decoupled from runtime state construction. Tools can optionally accept 
+`context: ToolContext` to access runtime state.
+
+TODO (Future PRs):
+    - Generalize AgentContextFactory into an ExecutionContextFactory protocol.
+    - Add execution lifecycle hooks integration with context (telemetry, tracing).
+    - Add cooperative cancellation support via context.cancellation_token.
+    - Add timeout/retry policies at the executor level.
 ===============================================================================
 """
 
@@ -34,6 +49,7 @@ from hermes.ai.request import AIRequest
 from hermes.ai.response import AIResponse, ResponseFactory
 from hermes.ai.tool import ToolManager
 from hermes.agent.executor.builder import RequestBuilder
+from hermes.agent.executor.context_factory import AgentContextFactory
 from hermes.agent.executor.conversation_manager import ConversationManager
 from hermes.agent.executor.tool_runner import ToolRunner
 
@@ -51,6 +67,7 @@ class AgentExecutor:
         model: str = "",
         max_iterations: int = 10,
         use_cache: bool = False,
+        context_factory: AgentContextFactory | None = None,
     ) -> None:
         self._pipeline = pipeline
         self._tool_manager = tool_manager
@@ -58,6 +75,7 @@ class AgentExecutor:
         self._model = model
         self._max_iterations = max_iterations
         self._use_cache = use_cache
+        self._context_factory = context_factory or AgentContextFactory()
 
     def run(
         self,
@@ -131,12 +149,15 @@ class AgentExecutor:
 
             self._before_tools()
 
-            # 6. Execute the tools
-            results = tool_runner.execute(response.tool_calls)
+            # 6. Build context using the factory, keeping executor decoupled from state
+            tool_context = self._context_factory.build(conversation)
+
+            # 7. Execute the tools via the runner
+            results = tool_runner.execute(response.tool_calls, context=tool_context)
 
             self._after_tools(results)
 
-            # 7. Append tool results to conversation
+            # 8. Append tool results to conversation
             for i, tc in enumerate(response.tool_calls):
                 result = results[i]
                 conv_manager.append_tool_result(tc, result)

@@ -11,6 +11,7 @@ Dependencies:
 Consumes:
     - ToolManager
     - list[ToolCall] (from AIResponse)
+    - ToolContext (built by AgentContextFactory)
 
 Produces:
     - list[ToolResult]
@@ -22,22 +23,26 @@ Public API:
 
 from __future__ import annotations
 
-from typing import List
+from typing import List, Optional
 
 from hermes.ai.adapters.provider_tool_adapter import ProviderToolAdapter
 from hermes.ai.response import ToolCall
-from hermes.ai.tool import ToolManager, ToolResult, ToolStatus
+from hermes.ai.tool import ToolManager, ToolResult, ToolStatus, ToolContext
 
 
 class ToolRunner:
     """
-    Handles the execution of tools and normalization of results.
+    Thin adapter that handles tool execution and result normalization.
     """
 
     def __init__(self, tool_manager: ToolManager) -> None:
         self._tool_manager = tool_manager
 
-    def execute(self, provider_tool_calls: List[ToolCall]) -> List[ToolResult]:
+    def execute(
+        self, 
+        provider_tool_calls: List[ToolCall], 
+        context: Optional[ToolContext] = None
+    ) -> List[ToolResult]:
         """
         Execute a batch of provider tool calls and return results mapped by call_id.
         """
@@ -46,7 +51,7 @@ class ToolRunner:
         )
 
         if converted_calls:
-            results = self._tool_manager.execute_batch(converted_calls)
+            results = self._tool_manager.execute_batch(converted_calls, context=context)
         else:
             results = []
 
