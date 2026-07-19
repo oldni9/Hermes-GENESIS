@@ -50,3 +50,6 @@ logs/
 
 # Jupyter
 .ipynb_checkpoints/
+
+codebase_extract.txt
+structure.txt

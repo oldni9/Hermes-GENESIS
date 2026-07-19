@@ -14,8 +14,10 @@ Dependencies:
     - hermes.agent.executor.conversation_manager
     - hermes.agent.executor.state
     - hermes.agent.executor.tool_runner
-    - hermes.agent.planner.planner
     - hermes.agent.planner.decision
+    - hermes.agent.planner.hasher
+    - hermes.agent.planner.planner
+    - hermes.agent.planner.reasoning_planner
 
 Consumes:
     - AIPipeline
@@ -29,15 +31,6 @@ Produces:
 
 Public API:
     - AgentExecutor.run()
-
-Integration Notes:
-The executor delegates the "what to do next" decision to the Planner.
-The executor handles FINISH, CALL_TOOLS, ABORT, and RETRY decisions.
-RETRY is handled by injecting transient messages (the failed response + feedback) 
-into the NEXT LLM request, without permanently mutating AIConversation.
-
-TODO (Future PRs):
-    - Add cooperative cancellation support via state.
 ===============================================================================
 """
 
@@ -50,21 +43,19 @@ from hermes.ai.conversation import AIConversation
 from hermes.ai.pipeline import AIPipeline
 from hermes.ai.request import AIRequest
 from hermes.ai.response import AIResponse, ResponseFactory
-from hermes.ai.tool import ToolManager, ToolResult
+from hermes.ai.tool import ToolManager, ToolResult, ToolStatus
 from hermes.agent.executor.builder import RequestBuilder
 from hermes.agent.executor.context_factory import AgentContextFactory
 from hermes.agent.executor.conversation_manager import ConversationManager
-from hermes.agent.executor.state import ExecutionState, ExecutionStatus
+from hermes.agent.executor.state import ExecutionState, ExecutionStatus, ToolFailureRecord
 from hermes.agent.executor.tool_runner import ToolRunner
 from hermes.agent.planner.decision import Decision
+from hermes.agent.planner.hasher import ToolCallHasher
 from hermes.agent.planner.planner import DefaultPlanner, Planner
+from hermes.agent.planner.reasoning_planner import ReasoningPlanner
 
 
 class AgentExecutor:
-    """
-    Orchestrates the ReAct loop.
-    """
-
     def __init__(
         self,
         pipeline: AIPipeline,
@@ -83,7 +74,11 @@ class AgentExecutor:
         self._max_iterations = max_iterations
         self._use_cache = use_cache
         self._context_factory = context_factory or AgentContextFactory()
-        self._planner = planner or DefaultPlanner()
+        
+        if planner is None:
+            self._planner = ReasoningPlanner(registry=self._tool_manager.registry)
+        else:
+            self._planner = planner
 
     def run(
         self,
@@ -91,9 +86,6 @@ class AgentExecutor:
         conversation: AIConversation,
         system_prompt: str | None = None,
     ) -> AIResponse:
-        """
-        Run the agent loop for a given prompt.
-        """
         state = ExecutionState(conversation=conversation)
         conv_manager = ConversationManager(conversation)
         tool_runner = ToolRunner(self._tool_manager)
@@ -106,7 +98,6 @@ class AgentExecutor:
         state.status = ExecutionStatus.RUNNING
         state.updated_at = time.time()
 
-        # Transient messages used for retries
         transient_messages: Optional[List[Dict[str, Any]]] = None
 
         for _ in range(self._max_iterations):
@@ -114,13 +105,9 @@ class AgentExecutor:
             state.updated_at = time.time()
             self._before_llm()
 
-            # 1. Serialize conversation to OpenAI-compatible messages
             message_dicts = RequestBuilder.build(conversation, transient_messages=transient_messages)
-            
-            # Clear transient messages after they are consumed by the builder
             transient_messages = None
 
-            # 2. Build AIRequest
             request = AIRequest(
                 prompt="",
                 input=None,
@@ -131,7 +118,6 @@ class AgentExecutor:
                 metadata={},
             )
 
-            # 3. Execute via pipeline
             response = self._pipeline.execute(
                 provider=self._provider,
                 request=request,
@@ -144,10 +130,8 @@ class AgentExecutor:
 
             self._after_llm(response)
 
-            # 4. Ask the planner what to do next
             decision = self._planner.decide(response, state)
 
-            # 5. Execute the decision
             if decision.decision == Decision.FINISH:
                 conv_manager.append_assistant(response.text() or "")
                 state.status = ExecutionStatus.FINISHED
@@ -174,6 +158,17 @@ class AgentExecutor:
                 results = tool_runner.execute(response.tool_calls, context=tool_context)
                 state.tool_results.extend(results)
 
+                for i, tc in enumerate(response.tool_calls):
+                    result = results[i]
+                    if result.status == ToolStatus.FAILED:
+                        fingerprint = ToolCallHasher.fingerprint(tc)
+                        state.failure_history.append(ToolFailureRecord(
+                            fingerprint=fingerprint,
+                            tool_name=tc.function.name if tc.function else "unknown",
+                            error=result.error or "Unknown error",
+                            iteration=state.iteration
+                        ))
+
                 self._after_tools(results)
 
                 for i, tc in enumerate(response.tool_calls):
@@ -185,15 +180,11 @@ class AgentExecutor:
                 continue
             
             elif decision.decision == Decision.RETRY:
-                # FIX: Do not mutate AIConversation. Build transient messages for the next request.
                 state.retry_count += 1
-                
-                # Preserve the failed response context and add feedback
                 transient_messages = [
                     {"role": "assistant", "content": response.text() or ""},
                     {"role": "system", "content": decision.feedback or "Please try again or use a tool."}
                 ]
-                
                 state.status = ExecutionStatus.RUNNING
                 state.updated_at = time.time()
                 continue

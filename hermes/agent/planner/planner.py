@@ -4,6 +4,7 @@ Planner
 ===============================================================================
 
 Dependencies:
+    - typing
     - hermes.ai.response
     - hermes.agent.executor.state
     - hermes.agent.planner.decision
@@ -13,10 +14,11 @@ Consumes:
     - ExecutionState
 
 Produces:
-    - PlannerDecision
+    - Planner
+    - DefaultPlanner
 
 Public API:
-    - Planner (Protocol)
+    - Planner
     - DefaultPlanner
 
 TODO (Future PRs):

@@ -11,15 +11,19 @@ Dependencies:
     - hermes.agent.planner.decision
     - hermes.agent.planner.policy
     - hermes.agent.planner.confidence
+    - hermes.agent.planner.hasher
+    - hermes.agent.planner.tool_validation
 
 Consumes:
     - AIResponse
     - ExecutionState
     - PlannerPolicy
     - ConfidenceEvaluator
+    - ToolValidator
 
 Produces:
     - PlannerRule
+    - ToolAvailabilityRule
     - RepeatedToolFailureRule
     - EmptyResponseRule
     - WeakAnswerRule
@@ -29,12 +33,6 @@ Produces:
 Public API:
     - PlannerRule
     - DefaultPlannerRules
-
-Rule Ordering:
-1. EmptyResponseRule
-2. WeakAnswerRule
-3. ToolCallRule
-4. FinishRule
 ===============================================================================
 """
 
@@ -46,47 +44,68 @@ from typing import List, Optional
 from hermes.agent.executor.state import ExecutionState
 from hermes.agent.planner.confidence import ConfidenceEvaluator
 from hermes.agent.planner.decision import Decision, PlannerDecision
+from hermes.agent.planner.hasher import ToolCallHasher
 from hermes.agent.planner.policy import PlannerPolicy
+from hermes.agent.planner.tool_validation import ToolValidationStatus, ToolValidator
 from hermes.ai.response import AIResponse
 
 
 class PlannerRule(ABC):
-    """
-    Abstract base class for all planner rules.
-    """
     @abstractmethod
     def evaluate(self, response: AIResponse, state: ExecutionState, policy: PlannerPolicy) -> Optional[PlannerDecision]:
         ...
 
 
-class RepeatedToolFailureRule(PlannerRule):
-    """
-    Detects if the LLM is trying to call a tool that just failed.
-    NOTE: Reserved for PR #6 once argument hashing exists. Not included in DefaultPlannerRules.
-    """
+class ToolAvailabilityRule(PlannerRule):
+    """Validates tool availability before allowing execution."""
+    
+    def __init__(self, validator: ToolValidator):
+        self._validator = validator
+
     def evaluate(self, response: AIResponse, state: ExecutionState, policy: PlannerPolicy) -> Optional[PlannerDecision]:
-        if not policy.abort_on_repeated_failure or not response.tool_calls or not state.tool_results:
+        if not response.tool_calls:
             return None
 
-        last_result = state.tool_results[-1]
-        if not last_result.failed:
+        results = self._validator.validate_batch(response.tool_calls)
+        
+        for res in results:
+            if res.status != ToolValidationStatus.VALID:
+                if res.status in [ToolValidationStatus.UNKNOWN_TOOL, ToolValidationStatus.DISABLED_TOOL]:
+                    return PlannerDecision(
+                        decision=Decision.ABORT,
+                        reason=res.reason,
+                        metadata={"validation_status": res.status.value}
+                    )
+                else:
+                    return PlannerDecision(
+                        decision=Decision.RETRY,
+                        reason=res.reason,
+                        feedback=f"Tool call to '{res.tool_call.function.name}' failed validation: {res.reason}. Please check arguments."
+                    )
+        return None
+
+
+class RepeatedToolFailureRule(PlannerRule):
+    """Detects if the LLM is trying to call a tool that just failed with the same arguments."""
+    
+    def evaluate(self, response: AIResponse, state: ExecutionState, policy: PlannerPolicy) -> Optional[PlannerDecision]:
+        if not policy.abort_on_repeated_failure or not response.tool_calls or not state.failure_history:
             return None
 
-        # TODO: Compare normalized arguments hash to prevent false positives.
+        failed_fingerprints = {rec.fingerprint for rec in state.failure_history}
+
         for tc in response.tool_calls:
-            if tc.id == last_result.call_id:
+            fingerprint = ToolCallHasher.fingerprint(tc)
+            if fingerprint in failed_fingerprints:
                 return PlannerDecision(
                     decision=Decision.ABORT,
-                    reason=f"Repeated failure detected for tool call ID '{last_result.call_id}'.",
-                    metadata={"call_id": last_result.call_id, "error": last_result.error}
+                    reason=f"Repeated failure detected for tool '{tc.function.name}' with identical arguments.",
+                    metadata={"fingerprint": fingerprint}
                 )
         return None
 
 
 class EmptyResponseRule(PlannerRule):
-    """
-    Detects empty responses and retries if configured and retry limit not reached.
-    """
     def evaluate(self, response: AIResponse, state: ExecutionState, policy: PlannerPolicy) -> Optional[PlannerDecision]:
         if not policy.retry_on_empty or not response.success or response.tool_calls:
             return None
@@ -94,10 +113,7 @@ class EmptyResponseRule(PlannerRule):
         text = response.text().strip()
         if not text:
             if state.retry_count >= policy.max_retries_on_failure:
-                return PlannerDecision(
-                    decision=Decision.ABORT,
-                    reason="Empty response received and retry limit reached."
-                )
+                return PlannerDecision(decision=Decision.ABORT, reason="Empty response received and retry limit reached.")
             return PlannerDecision(
                 decision=Decision.RETRY,
                 reason="Empty response received.",
@@ -107,9 +123,6 @@ class EmptyResponseRule(PlannerRule):
 
 
 class WeakAnswerRule(PlannerRule):
-    """
-    Evaluates confidence and retries if the answer is too weak and retry limit not reached.
-    """
     def __init__(self, confidence_evaluator: ConfidenceEvaluator):
         self._evaluator = confidence_evaluator
 
@@ -121,10 +134,7 @@ class WeakAnswerRule(PlannerRule):
         
         if len(text) < policy.minimum_response_length:
             if state.retry_count >= policy.max_retries_on_failure:
-                return PlannerDecision(
-                    decision=Decision.ABORT,
-                    reason="Weak answer received and retry limit reached."
-                )
+                return PlannerDecision(decision=Decision.ABORT, reason="Weak answer received and retry limit reached.")
             return PlannerDecision(
                 decision=Decision.RETRY,
                 reason=f"Response too short (len={len(text)}).",
@@ -134,10 +144,7 @@ class WeakAnswerRule(PlannerRule):
         confidence = self._evaluator.evaluate(response, state)
         if confidence < policy.min_confidence_threshold:
             if state.retry_count >= policy.max_retries_on_failure:
-                return PlannerDecision(
-                    decision=Decision.ABORT,
-                    reason="Low confidence answer received and retry limit reached."
-                )
+                return PlannerDecision(decision=Decision.ABORT, reason="Low confidence answer received and retry limit reached.")
             return PlannerDecision(
                 decision=Decision.RETRY,
                 reason=f"Low confidence score ({confidence}).",
@@ -149,9 +156,6 @@ class WeakAnswerRule(PlannerRule):
 
 
 class ToolCallRule(PlannerRule):
-    """
-    If tool calls are present and no previous rule aborted, execute them.
-    """
     def evaluate(self, response: AIResponse, state: ExecutionState, policy: PlannerPolicy) -> Optional[PlannerDecision]:
         if response.success and response.tool_calls:
             return PlannerDecision(
@@ -163,25 +167,25 @@ class ToolCallRule(PlannerRule):
 
 
 class FinishRule(PlannerRule):
-    """
-    If no other rule matched and the response is successful, finish.
-    """
     def evaluate(self, response: AIResponse, state: ExecutionState, policy: PlannerPolicy) -> Optional[PlannerDecision]:
         if response.success and not response.tool_calls:
-            return PlannerDecision(
-                decision=Decision.FINISH,
-                reason="Final response received with no tool calls."
-            )
+            return PlannerDecision(decision=Decision.FINISH, reason="Final response received with no tool calls.")
         return None
 
 
-def DefaultPlannerRules(confidence_evaluator: ConfidenceEvaluator) -> List[PlannerRule]:
-    """
-    Returns the default set of rules in priority order.
-    """
-    return [
+def DefaultPlannerRules(confidence_evaluator: ConfidenceEvaluator, tool_validator: Optional[ToolValidator] = None) -> List[PlannerRule]:
+    """Returns the default set of rules in priority order."""
+    rules: List[PlannerRule] = []
+    
+    if tool_validator:
+        rules.append(ToolAvailabilityRule(tool_validator))
+        
+    rules.extend([
+        RepeatedToolFailureRule(),
         EmptyResponseRule(),
         WeakAnswerRule(confidence_evaluator),
         ToolCallRule(),
         FinishRule(),
-    ]
+    ])
+    
+    return rules

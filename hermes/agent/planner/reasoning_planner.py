@@ -11,6 +11,8 @@ Dependencies:
     - hermes.agent.planner.decision
     - hermes.agent.planner.heuristics
     - hermes.agent.planner.policy
+    - hermes.agent.planner.telemetry
+    - hermes.agent.planner.tool_validation
 
 Consumes:
     - AIResponse
@@ -18,6 +20,7 @@ Consumes:
     - ConfidenceEvaluator
     - List[PlannerRule]
     - PlannerPolicy
+    - ToolRegistry
 
 Produces:
     - ReasoningPlanner
@@ -36,31 +39,50 @@ from hermes.agent.planner.confidence import ConfidenceEvaluator, HeuristicConfid
 from hermes.agent.planner.decision import Decision, PlannerDecision
 from hermes.agent.planner.heuristics import DefaultPlannerRules, PlannerRule
 from hermes.agent.planner.policy import PlannerPolicy
+from hermes.agent.planner.telemetry import PlannerTraceEntry
+from hermes.agent.planner.tool_validation import ToolValidator
 from hermes.ai.response import AIResponse
+from hermes.ai.tool import ToolRegistry
 
 
 class ReasoningPlanner:
     """
     A rule-based planner that evaluates responses against a set of heuristics
-    before deciding the next action.
+    before deciding the next action. Records telemetry traces for observability.
     """
     def __init__(
         self,
         policy: Optional[PlannerPolicy] = None,
         confidence_evaluator: Optional[ConfidenceEvaluator] = None,
-        rules: Optional[List[PlannerRule]] = None
+        rules: Optional[List[PlannerRule]] = None,
+        registry: Optional[ToolRegistry] = None
     ):
         self._policy = policy or PlannerPolicy()
         self._confidence_evaluator = confidence_evaluator or HeuristicConfidenceEvaluator()
-        self._rules = rules or DefaultPlannerRules(self._confidence_evaluator)
+        
+        tool_validator = ToolValidator(registry) if registry else None
+        
+        self._rules = rules or DefaultPlannerRules(self._confidence_evaluator, tool_validator)
 
     def decide(self, response: AIResponse, state: ExecutionState) -> PlannerDecision:
         """
         Evaluates the response against all rules in order.
-        The first rule that returns a decision wins.
+        Records telemetry for every rule evaluated.
         """
         for rule in self._rules:
             decision = rule.evaluate(response, state, self._policy)
+            rule_name = rule.__class__.__name__
+            matched = decision is not None
+            
+            # Record telemetry
+            state.planner_trace.append(PlannerTraceEntry(
+                iteration=state.iteration,
+                rule_name=rule_name,
+                matched=matched,
+                decision=decision.decision if decision else None,
+                reason=decision.reason if decision else ""
+            ))
+            
             if decision is not None:
                 return decision
                 
