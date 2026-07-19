@@ -18,6 +18,7 @@ from hermes.ai.pipeline import AIPipeline
 from hermes.ai.request import AIRequest
 from hermes.ai.response import AIResponse, ToolCall, FunctionCall, ResponseChoice, ResponseMessage
 from hermes.ai.tool import ToolManager, ToolRegistry, ToolResult, ToolStatus, ToolContext
+from hermes.workspace.context import ExecutionContext
 
 
 @pytest.fixture
@@ -65,6 +66,25 @@ def test_agent_no_tools(mock_pipeline, mock_tool_manager, conversation):
     assert response.text() == "Hello! How can I help you today?"
     assert len(conversation) == 2
     mock_pipeline.execute.assert_called_once()
+
+def test_agent_injects_execution_context(mock_pipeline, mock_tool_manager, conversation):
+    """Test that ExecutionContext IDs are propagated to AIRequest metadata."""
+    mock_pipeline.execute.return_value = make_text_response("Done.")
+    
+    agent = AgentExecutor(
+        pipeline=mock_pipeline,
+        tool_manager=mock_tool_manager,
+        provider="test",
+        model="test-model",
+        planner=ReasoningPlanner(registry=mock_tool_manager.registry)
+    )
+    
+    ctx = ExecutionContext.create(workspace_id="ws_test", metadata={"trace": True})
+    agent.run("Hi", conversation, execution_context=ctx)
+    
+    _, kwargs = mock_pipeline.execute.call_args
+    request: AIRequest = kwargs["request"]
+    assert request.metadata["execution_id"] == ctx.execution_id
 
 def test_agent_retry_does_not_mutate_conversation(mock_pipeline, mock_tool_manager, conversation):
     mock_pipeline.execute.side_effect = [

@@ -74,7 +74,7 @@ class ExecutionState:
     Passive runtime state container for a single AgentExecutor.run() invocation.
     """
     conversation: AIConversation
-    execution_id: str = field(default_factory=lambda: uuid.uuid4().hex)
+    execution_id: str = field(default_factory=lambda: f"exec_{uuid.uuid4().hex}")
     iteration: int = 0
     retry_count: int = 0
     status: ExecutionStatus = ExecutionStatus.IDLE

@@ -1,0 +1,75 @@
+"""
+===============================================================================
+Tests for Workspace Context & Manager
+===============================================================================
+"""
+
+import pytest
+from hermes.workspace.context import ExecutionContext
+from hermes.workspace.workspace import Workspace
+from hermes.workspace.manager import WorkspaceManager
+from hermes.long_term_memory.manager import MemoryManager
+
+
+def test_execution_context_creation():
+    ctx = ExecutionContext.create(workspace_id="ws_123", metadata={"user": "test"})
+    assert ctx.execution_id.startswith("exec_")
+    assert ctx.workspace_id == "ws_123"
+    assert ctx.metadata == {"user": "test"}
+    assert ctx.start_time > 0
+
+def test_execution_context_immutability():
+    ctx = ExecutionContext.create(workspace_id="ws_123")
+    with pytest.raises(Exception):
+        ctx.execution_id = "new_id"  # type: ignore
+
+def test_workspace_creation():
+    ws = Workspace()
+    assert ws.workspace_id.startswith("ws_")
+    assert isinstance(ws.memory, MemoryManager)
+    assert len(ws.execution_history) == 0
+
+def test_workspace_custom_id_and_memory():
+    mem = MemoryManager()
+    ws = Workspace(workspace_id="custom_ws", memory_manager=mem)
+    assert ws.workspace_id == "custom_ws"
+    assert ws.memory is mem
+
+def test_workspace_execution_history():
+    ws = Workspace()
+    ctx1 = ws.create_execution(metadata={"run": 1})
+    ctx2 = ws.create_execution(metadata={"run": 2})
+    
+    assert len(ws.execution_history) == 2
+    assert ws.execution_history[0].execution_id == ctx1.execution_id
+    assert ws.execution_history[1].execution_id == ctx2.execution_id
+    
+    fetched = ws.get_execution(ctx1.execution_id)
+    assert fetched is not None
+    assert fetched.metadata == {"run": 1}
+    
+    assert ws.get_execution("nonexistent") is None
+
+def test_workspace_manager_crud():
+    mgr = WorkspaceManager()
+    
+    # Create
+    ws1 = mgr.create_workspace()
+    ws2 = mgr.create_workspace("explicit_id")
+    assert len(mgr.list_workspaces()) == 2
+    
+    # Read
+    assert mgr.get_workspace(ws1.workspace_id) is ws1
+    assert mgr.get_workspace("explicit_id") is ws2
+    assert mgr.get_workspace("fake") is None
+    
+    # Delete
+    assert mgr.delete_workspace("explicit_id") is True
+    assert mgr.delete_workspace("fake") is False
+    assert len(mgr.list_workspaces()) == 1
+
+def test_workspace_manager_duplicate_id():
+    mgr = WorkspaceManager()
+    mgr.create_workspace("unique_id")
+    with pytest.raises(ValueError, match="already exists"):
+        mgr.create_workspace("unique_id")

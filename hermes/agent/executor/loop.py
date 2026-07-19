@@ -18,6 +18,7 @@ Dependencies:
     - hermes.agent.planner.hasher
     - hermes.agent.planner.planner
     - hermes.agent.planner.reasoning_planner
+    - hermes.workspace.context
 
 Consumes:
     - AIPipeline
@@ -25,6 +26,7 @@ Consumes:
     - AIConversation
     - AgentContextFactory
     - Planner
+    - ExecutionContext
 
 Produces:
     - AIResponse (Final)
@@ -53,6 +55,8 @@ from hermes.agent.planner.decision import Decision
 from hermes.agent.planner.hasher import ToolCallHasher
 from hermes.agent.planner.planner import DefaultPlanner, Planner
 from hermes.agent.planner.reasoning_planner import ReasoningPlanner
+# FIX: Import from the new workspace package to avoid runtime collision
+from hermes.workspace.context import ExecutionContext
 
 
 class AgentExecutor:
@@ -85,8 +89,20 @@ class AgentExecutor:
         prompt: str,
         conversation: AIConversation,
         system_prompt: str | None = None,
+        execution_context: ExecutionContext | None = None
     ) -> AIResponse:
-        state = ExecutionState(conversation=conversation)
+        """
+        Run the agent loop for a given prompt.
+        Optionally accepts an ExecutionContext to bind this run to a Workspace.
+        """
+        exec_ctx = execution_context or ExecutionContext.create(workspace_id="ephemeral")
+        
+        state = ExecutionState(
+            conversation=conversation,
+            execution_id=exec_ctx.execution_id,
+            metadata={"workspace_id": exec_ctx.workspace_id, **exec_ctx.metadata}
+        )
+        
         conv_manager = ConversationManager(conversation)
         tool_runner = ToolRunner(self._tool_manager)
 
@@ -115,7 +131,7 @@ class AgentExecutor:
                 model=self._model,
                 task="chat",
                 options={"messages": message_dicts},
-                metadata={},
+                metadata={"execution_id": exec_ctx.execution_id},
             )
 
             response = self._pipeline.execute(
