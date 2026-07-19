@@ -1,0 +1,33 @@
+name: groq
+
+display_name: Groq
+
+client: GroqClient
+
+type: cloud
+
+enabled: true
+
+supports:
+
+  text: true
+  vision: false
+  image: false
+  audio: false
+  video: false
+  embeddings: false
+  live: false
+
+connection:
+
+  api_key_env: GROQ_API_KEY
+
+models:
+
+  default: llama-4-scout
+
+  available:
+
+    - llama-4-scout
+    - llama-4-maverick
+    - qwen-qwq-32b

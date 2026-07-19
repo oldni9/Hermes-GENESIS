@@ -1,0 +1,29 @@
+name: lmstudio
+
+display_name: LM Studio
+
+client: LMStudioClient
+
+type: local
+
+enabled: true
+
+supports:
+
+  text: true
+  vision: true
+  image: false
+  audio: false
+  video: false
+  embeddings: true
+  live: false
+
+connection:
+
+  host: http://localhost:1234/v1
+
+models:
+
+  default: ""
+
+  available: []

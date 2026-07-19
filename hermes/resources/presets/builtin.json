@@ -1,0 +1,10 @@
+[
+    {
+        "name": "Default Workspace",
+        "enabled": true,
+        "profile": "default",
+        "metadata": {
+            "description": "Default Hermes workspace."
+        }
+    }
+]
