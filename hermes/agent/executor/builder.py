@@ -30,7 +30,7 @@ once Hermes introduces a provider-neutral chat serialization layer.
 
 from __future__ import annotations
 
-from typing import Any, List
+from typing import Any, List, Optional
 
 from hermes.ai.conversation import AIConversation
 
@@ -42,9 +42,16 @@ class RequestBuilder:
     """
 
     @staticmethod
-    def build(conversation: AIConversation) -> List[dict[str, Any]]:
+    def build(
+        conversation: AIConversation, 
+        transient_messages: Optional[List[dict[str, Any]]] = None
+    ) -> List[dict[str, Any]]:
         """
         Serialize conversation history into provider-ready dictionaries.
+        
+        :param transient_messages: Optional list of messages to append temporarily 
+                                    for the current request (e.g., retry feedback) 
+                                    without mutating the AIConversation.
         """
         messages: List[dict[str, Any]] = []
 
@@ -71,5 +78,9 @@ class RequestBuilder:
                 entry["tool_calls"] = [tc.to_dict() for tc in msg.tool_calls]
 
             messages.append(entry)
+
+        # Append transient messages at the end
+        if transient_messages:
+            messages.extend(transient_messages)
 
         return messages

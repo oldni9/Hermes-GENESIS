@@ -61,6 +61,7 @@ class ExecutionState:
     conversation: AIConversation
     execution_id: str = field(default_factory=lambda: uuid.uuid4().hex)
     iteration: int = 0
+    retry_count: int = 0  # FIX: Added retry_count to enforce max_retries_on_failure
     status: ExecutionStatus = ExecutionStatus.IDLE
     current_response: Optional[AIResponse] = None
     response_history: List[AIResponse] = field(default_factory=list)

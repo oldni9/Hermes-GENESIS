@@ -14,12 +14,15 @@ Dependencies:
     - hermes.agent.executor.conversation_manager
     - hermes.agent.executor.state
     - hermes.agent.executor.tool_runner
+    - hermes.agent.planner.planner
+    - hermes.agent.planner.decision
 
 Consumes:
     - AIPipeline
     - ToolManager
     - AIConversation
     - AgentContextFactory
+    - Planner
 
 Produces:
     - AIResponse (Final)
@@ -28,18 +31,21 @@ Public API:
     - AgentExecutor.run()
 
 Integration Notes:
-The executor maintains an ExecutionState object internally. This centralizes
-runtime variables (iteration, status, responses) making future features like
-planners, schedulers, and tracing significantly easier to implement.
-The state object is passive; the executor mutates it directly.
+The executor delegates the "what to do next" decision to the Planner.
+The executor handles FINISH, CALL_TOOLS, ABORT, and RETRY decisions.
+RETRY is handled by injecting transient messages (the failed response + feedback) 
+into the NEXT LLM request, without permanently mutating AIConversation.
 
 TODO (Future PRs):
-    - Expose ExecutionState via lifecycle hooks.
     - Add cooperative cancellation support via state.
 ===============================================================================
 """
+
 from __future__ import annotations
+
 import time
+from typing import Any, Dict, List, Optional
+
 from hermes.ai.conversation import AIConversation
 from hermes.ai.pipeline import AIPipeline
 from hermes.ai.request import AIRequest
@@ -53,10 +59,12 @@ from hermes.agent.executor.tool_runner import ToolRunner
 from hermes.agent.planner.decision import Decision
 from hermes.agent.planner.planner import DefaultPlanner, Planner
 
+
 class AgentExecutor:
     """
     Orchestrates the ReAct loop.
     """
+
     def __init__(
         self,
         pipeline: AIPipeline,
@@ -94,24 +102,12 @@ class AgentExecutor:
             conv_manager.append_system(system_prompt)
 
         conv_manager.append_user(prompt)
-
+        
         state.status = ExecutionStatus.RUNNING
         state.updated_at = time.time()
 
-        # ============================================================================
-        # IMPORTANT
-        #
-        # The assistant/tool message ordering follows the OpenAI tool-calling contract.
-        #
-        # assistant(tool_calls)
-        # ↓
-        # tool(tool_call_id=...)
-        # ↓
-        # assistant(final)
-        #
-        # Changing this ordering will break compatibility with OpenAI-compatible
-        # providers and future multi-step reasoning.
-        # ============================================================================
+        # Transient messages used for retries
+        transient_messages: Optional[List[Dict[str, Any]]] = None
 
         for _ in range(self._max_iterations):
             state.iteration += 1
@@ -119,7 +115,10 @@ class AgentExecutor:
             self._before_llm()
 
             # 1. Serialize conversation to OpenAI-compatible messages
-            message_dicts = RequestBuilder.build(conversation)
+            message_dicts = RequestBuilder.build(conversation, transient_messages=transient_messages)
+            
+            # Clear transient messages after they are consumed by the builder
+            transient_messages = None
 
             # 2. Build AIRequest
             request = AIRequest(
@@ -139,7 +138,7 @@ class AgentExecutor:
                 context=None,
                 use_cache=self._use_cache,
             )
-
+            
             state.current_response = response
             state.response_history.append(response)
 
@@ -154,38 +153,52 @@ class AgentExecutor:
                 state.status = ExecutionStatus.FINISHED
                 state.updated_at = time.time()
                 return response
-
+                
             elif decision.decision == Decision.ABORT:
                 state.status = ExecutionStatus.FAILED
                 state.updated_at = time.time()
-                return response
-
+                return ResponseFactory.error(
+                    message=f"Execution aborted: {decision.reason}",
+                    provider=self._provider,
+                    model=self._model
+                )
+                
             elif decision.decision == Decision.CALL_TOOLS:
-                # Append assistant tool call message to history
                 conv_manager.append_tool_calls(response)
                 state.status = ExecutionStatus.WAITING_FOR_TOOLS
                 state.updated_at = time.time()
 
                 self._before_tools()
 
-                # Build context and execute tools
                 tool_context = self._context_factory.build(conversation)
                 results = tool_runner.execute(response.tool_calls, context=tool_context)
                 state.tool_results.extend(results)
 
                 self._after_tools(results)
 
-                # Append tool results to conversation
                 for i, tc in enumerate(response.tool_calls):
                     result = results[i]
                     conv_manager.append_tool_result(tc, result)
-
+                
                 state.status = ExecutionStatus.RUNNING
                 state.updated_at = time.time()
                 continue
-
+            
+            elif decision.decision == Decision.RETRY:
+                # FIX: Do not mutate AIConversation. Build transient messages for the next request.
+                state.retry_count += 1
+                
+                # Preserve the failed response context and add feedback
+                transient_messages = [
+                    {"role": "assistant", "content": response.text() or ""},
+                    {"role": "system", "content": decision.feedback or "Please try again or use a tool."}
+                ]
+                
+                state.status = ExecutionStatus.RUNNING
+                state.updated_at = time.time()
+                continue
+            
             else:
-                # Unhandled decision (e.g., RETRY, CONTINUE) - abort for now
                 state.status = ExecutionStatus.FAILED
                 state.updated_at = time.time()
                 return ResponseFactory.error(
@@ -194,7 +207,6 @@ class AgentExecutor:
                     model=self._model,
                 )
 
-        # Loop exhausted
         state.status = ExecutionStatus.MAX_ITERATIONS
         state.updated_at = time.time()
         return ResponseFactory.error(
@@ -203,22 +215,14 @@ class AgentExecutor:
             model=self._model,
         )
 
-    # ------------------------------------------------------------------
-    # Lifecycle Hooks (for future extensibility)
-    # ------------------------------------------------------------------
-
     def _before_llm(self) -> None:
-        """Called before LLM execution."""
         pass
 
     def _after_llm(self, response: AIResponse) -> None:
-        """Called after LLM execution."""
         pass
 
     def _before_tools(self) -> None:
-        """Called before tool batch execution."""
         pass
 
     def _after_tools(self, results: list[ToolResult]) -> None:
-        """Called after tool batch execution."""
         pass

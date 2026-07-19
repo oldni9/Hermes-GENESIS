@@ -45,3 +45,4 @@ class PlannerDecision:
     decision: Decision
     reason: str = ""
     metadata: dict[str, Any] = field(default_factory=dict)
+    feedback: Optional[str] = None  # Used for RETRY decisions to guide the LLM
