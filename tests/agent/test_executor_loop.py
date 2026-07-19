@@ -9,6 +9,8 @@ from unittest.mock import MagicMock
 
 from hermes.agent.executor.loop import AgentExecutor
 from hermes.agent.executor.context_factory import AgentContextFactory
+from hermes.agent.planner.planner import DefaultPlanner
+from hermes.agent.planner.decision import Decision, PlannerDecision
 from hermes.ai.conversation import AIConversation
 from hermes.ai.pipeline import AIPipeline
 from hermes.ai.request import AIRequest
@@ -268,7 +270,6 @@ def test_agent_passes_context_to_tools(mock_pipeline, mock_tool_manager, convers
 def test_agent_uses_custom_context_factory(mock_pipeline, mock_tool_manager, conversation):
     """Test that a custom context factory can be injected."""
     mock_factory = MagicMock(spec=AgentContextFactory)
-    # FIX: ToolContext uses `session`, not `session_id`
     custom_context = ToolContext(session="custom-session")
     mock_factory.build.return_value = custom_context
     
@@ -297,3 +298,33 @@ def test_agent_uses_custom_context_factory(mock_pipeline, mock_tool_manager, con
     # Verify the custom context was passed down
     _, kwargs = mock_tool_manager.execute_batch.call_args
     assert kwargs.get("context") is custom_context
+
+def test_agent_uses_custom_planner(mock_pipeline, mock_tool_manager, conversation):
+    """Test that a custom planner can be injected and overrides default behavior."""
+    mock_planner = MagicMock(spec=DefaultPlanner)
+    
+    # Force the planner to always decide to ABORT, even if the response is successful
+    mock_planner.decide.return_value = PlannerDecision(
+        decision=Decision.ABORT,
+        reason="Custom planner abort"
+    )
+    
+    mock_pipeline.execute.return_value = make_text_response("Hello")
+    
+    agent = AgentExecutor(
+        pipeline=mock_pipeline,
+        tool_manager=mock_tool_manager,
+        provider="test",
+        model="test-model",
+        planner=mock_planner
+    )
+    
+    response = agent.run("Hi", conversation)
+    
+    # Verify the custom planner was called
+    mock_planner.decide.assert_called_once()
+    
+    # Verify the executor honored the ABORT decision and returned immediately
+    # without appending the assistant message to the conversation
+    assert len(conversation) == 1 # Only the user message
+    assert response.success # The response itself was successful
