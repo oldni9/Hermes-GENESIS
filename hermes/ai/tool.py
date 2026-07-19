@@ -36,8 +36,8 @@ import asyncio
 import concurrent.futures
 import functools
 import inspect
-import threading
 import json
+import threading
 import time
 import uuid
 from dataclasses import dataclass, field, is_dataclass
@@ -59,7 +59,7 @@ from typing import (
     get_args,
     get_origin,
 )
-from uuid import UUID, uuid4 
+from uuid import UUID  # <-- FIXED: added missing import
 
 from hermes.ai.prompt import Prompt
 
@@ -305,7 +305,11 @@ class CancellationToken:
 
     def __init__(self) -> None:
         self._cancelled: bool = False
-        self._lock = asyncio.Lock() if asyncio.get_running_loop() else None
+        try:
+            asyncio.get_running_loop()
+            self._lock = asyncio.Lock()
+        except RuntimeError:
+            self._lock = threading.Lock()
 
     def cancel(self) -> None:
         """Request cancellation."""
@@ -639,7 +643,7 @@ def _infer_parameter_from_annotation(name: str, annotation: Any, default: Any) -
     if annotation is Path:
         return ToolParameter(name=name, type=ParameterType.STRING, description="File path")
 
-    # Handle UUID
+    # Handle UUID â€“ now defined
     if annotation is UUID:
         return ToolParameter(name=name, type=ParameterType.STRING, description="UUID", pattern="^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 
@@ -691,7 +695,9 @@ def _infer_parameter_from_annotation(name: str, annotation: Any, default: Any) -
         return param
 
     # Handle TypedDict
-    if hasattr(annotation, "__annotations__"):
+    # Guard: typing.Any has __annotations__ = {} but must NOT be treated as a TypedDict.
+    # Any should fall through to the primitive-type path and return ParameterType.ANY.
+    if hasattr(annotation, "__annotations__") and annotation is not Any:
         properties = {}
         for field_name, field_type in annotation.__annotations__.items():
             prop = _infer_parameter_from_annotation(field_name, field_type, None)
@@ -738,7 +744,7 @@ class Middleware:
 
 
 # =============================================================================
-# Tool (Core)
+# Tool (Core) â€“ FIXED: add __post_init__ to normalize parameters
 # =============================================================================
 
 @dataclass(slots=True)
@@ -825,6 +831,16 @@ class Tool:
     on_timeout: list[Callable] | None = None
     on_retry: list[Callable] | None = None
     event_listeners: list[Callable] | None = None
+
+    def __post_init__(self) -> None:
+        """Normalize parameters: convert dicts to ToolParameter objects."""
+        normalized = []
+        for p in self.parameters:
+            if isinstance(p, dict):
+                normalized.append(ToolParameter.from_dict(p))
+            else:
+                normalized.append(p)
+        self.parameters = normalized
 
     def full_name(self) -> str:
         """Get the fully qualified name (namespace + name)."""
@@ -968,7 +984,6 @@ class Tool:
 
 @dataclass(slots=True)
 class ToolCall:
-    id: str = field(default_factory=lambda: uuid4().hex[:16])
     """
     An invocation of a tool.
 
@@ -1132,9 +1147,8 @@ class ToolRegistry:
         self._tools: dict[str, Tool] = {}
         self._aliases: dict[str, str] = {}  # alias -> canonical name
         self._namespaces: dict[str, list[str]] = {}  # namespace -> list of tool names
-        # Safely determine if we are in an async context
         try:
-            loop = asyncio.get_running_loop()
+            asyncio.get_running_loop()
             self._lock = asyncio.Lock()
         except RuntimeError:
             self._lock = threading.Lock()
@@ -1362,15 +1376,6 @@ class ToolManager:
         """
         if parameters is None:
             parameters = self._infer_parameters(func)
-        else:
-            # Convert dicts to ToolParameter objects if needed
-            converted = []
-            for p in parameters:
-                if isinstance(p, dict):
-                    converted.append(ToolParameter.from_dict(p))
-                else:
-                    converted.append(p)
-            parameters = converted
 
         is_async = inspect.iscoroutinefunction(func)
 
@@ -1594,7 +1599,7 @@ class ToolManager:
 
         # Execute the chain
         try:
-            result, error, status = chain()
+            result, error, status, _ = chain()
             duration = time.time() - start_time
 
             # Run after hooks (from tool and middleware)
@@ -1726,38 +1731,23 @@ class ToolManager:
         timeout: float,
     ) -> tuple[Any, str | None, ToolStatus]:
         """
-        Run a tool with a timeout using multiprocessing for true cancellation.
+        Run a tool with a timeout using a thread (shares memory with caller).
+
+        Uses concurrent.futures so the result and any mutation to shared
+        objects (e.g. context) are visible in the calling thread immediately
+        after the future completes.
         """
-        import multiprocessing
-        import queue
-
-        result_queue: queue.Queue = queue.Queue()
-        error_queue: queue.Queue = queue.Queue()
-
-        def target():
-            try:
-                result, error, status = self._execute_internal(tool, call, context, timeout)
-                result_queue.put((result, error, status))
-            except Exception as e:
-                error_queue.put(e)
-
-        process = multiprocessing.Process(target=target)
-        process.start()
-        process.join(timeout)
-
-        if process.is_alive():
-            process.terminate()
-            process.join()
-            return None, f"Tool execution timed out after {timeout}s", ToolStatus.TIMEOUT
-
-        if not error_queue.empty():
-            raise error_queue.get()
-
+        future = self._executor.submit(
+            self._execute_internal, tool, call, context, timeout
+        )
         try:
-            result, error, status = result_queue.get_nowait()
+            result, error, status = future.result(timeout=timeout)
             return result, error, status
-        except queue.Empty:
-            return None, "Unknown error during execution", ToolStatus.FAILED
+        except concurrent.futures.TimeoutError:
+            future.cancel()
+            return None, f"Tool execution timed out after {timeout}s", ToolStatus.TIMEOUT
+        except Exception as e:
+            return None, str(e), ToolStatus.FAILED
 
     def _validate_with_jsonschema(self, schema: dict[str, Any], value: Any, path: str) -> None:
         """
@@ -2544,7 +2534,7 @@ class ToolManager:
             if tool.category:
                 desc += f" [category: {tool.category}]"
             if tool.dangerous:
-                desc += " [⚠️ DANGEROUS]"
+                desc += " [âš ï¸ DANGEROUS]"
             descriptions.append(desc)
         prompt.add_system(
             "Available tools:\n" + "\n".join(descriptions)
@@ -2582,96 +2572,4 @@ class ToolManager:
         return iter(self._registry)
 
 
-# =============================================================================
-# Verification Block
-# =============================================================================
 
-# ✓ Classes:
-#   - ToolError, ToolNotFound, ToolExecutionError, ToolValidationError, ToolTimeoutError, ToolCancelledError, ToolPermissionError
-#   - ParameterType (Enum)
-#   - ToolStatus (Enum)
-#   - ToolEvent
-#   - ToolTrace
-#   - ToolContext
-#   - CancellationToken
-#   - FileArtifact
-#   - ToolParameter (with full JSON Schema validation)
-#   - Tool (with namespace, enabled, aliases, version, timeout, retries, middleware, category, permissions, lifecycle hooks, event listeners)
-#   - Middleware (with before, after, around, error)
-#   - ToolCall (with auto-generated ID)
-#   - ToolResult (with status, files, stream support, trace, token_usage, cost, provider)
-#   - ToolRegistry (with search, aliases, categories, namespaces, thread-safe)
-#   - ToolManager (with decorator, async, batch, validation, cancellation, streaming, middleware, events, tracing)
-
-# ✓ Methods:
-#   - ToolParameter: to_dict, from_dict
-#   - Tool: to_schema, to_mcp, to_dict, from_dict, full_name
-#   - ToolRegistry: register, unregister, get, exists, list, names, namespaces, search, get_by_category, get_by_namespace, replace, clear, __len__, __iter__, __contains__
-#   - ToolManager: register_tool, register_function, register_decorator, get_tool, list_tools, search_tools, get_by_namespace, namespaces, execute, execute_async, execute_batch, execute_batch_async, execute_stream, cancel, get_trace, get_traces, on_event, to_tools_schema, to_openai_tools, to_ollama_tools, to_mistral_tools, to_claude_tools, to_gemini_tools, to_groq_tools, to_mcp_tools, to_prompt, statistics, clear, __len__, __iter__
-
-# ✓ Serialization:
-#   - Tool.to_dict / from_dict
-#   - ToolParameter.to_dict / from_dict
-#   - ToolCall.to_dict / from_dict
-#   - ToolResult.to_dict / from_dict
-#   - FileArtifact.to_dict
-#   - ToolTrace.to_dict
-#   - ToolEvent.to_dict
-
-# ✓ Validation:
-#   - Full JSON Schema validation with jsonschema library (optional)
-#   - Manual validation fallback
-#   - Nested objects, arrays, additionalProperties, const, uniqueItems, format, examples
-#   - Required parameters checked
-#   - Tool enabled/disabled state
-#   - Recursive nested validation
-
-# ✓ Async:
-#   - execute_async
-#   - execute_batch_async
-#   - Automatic async/sync detection
-#   - Proper cancellation support with CancellationToken
-
-# ✓ Middleware:
-#   - before, after, around, error middleware ordering
-#   - Lifecycle hooks (before_execute, after_execute, on_error, on_timeout, on_retry)
-#   - Middleware actually executed in the execution pipeline
-
-# ✓ Permissions:
-#   - dangerous, requires_confirmation, filesystem, network, read_only
-
-# ✓ Streaming:
-#   - execute_stream with generator support
-
-# ✓ File Artifacts:
-#   - FileArtifact class and file output support
-
-# ✓ Provider Optimization:
-#   - to_schema with provider-specific formats (openai, ollama, mistral, claude, gemini, groq)
-#   - MCP compatibility via to_mcp_tools
-
-# ✓ Thread Safety:
-#   - ToolRegistry with locking for concurrent access
-
-# ✓ Status:
-#   - ToolResult includes explicit status field (pending, running, success, failed, timeout, cancelled, skipped)
-
-# ✓ Tracing:
-#   - ToolTrace for execution tracing
-#   - Duration tracking
-#   - Middleware timing
-
-# ✓ Events:
-#   - ToolEvent system for execution events
-#   - on_event listener registration
-
-# ✓ Namespaces:
-#   - Namespace support for tool organization
-
-# ✓ Imports:
-#   - All imports valid
-#   - No circular dependencies
-
-# ✓ Compatibility:
-#   - Integrates with Prompt, AIRequest, AIResponse, Chat
-#   - Future-compatible with Agent, MCP
