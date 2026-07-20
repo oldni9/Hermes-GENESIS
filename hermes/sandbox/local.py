@@ -6,6 +6,7 @@ Local Sandbox
 Dependencies:
     - os
     - subprocess
+    - sys
     - tempfile
     - time
     - uuid
@@ -17,14 +18,9 @@ Consumes:
 
 Produces:
     - LocalSandbox
-    - SandboxResult
 
 Public API:
     - LocalSandbox
-
-TODO (Future PRs):
-    - Implement CPU/RAM limits (requires Docker/Firecracker).
-    - Implement network restrictions.
 ===============================================================================
 """
 
@@ -44,16 +40,10 @@ from hermes.sandbox.base import SandboxRequest, SandboxResult, Sandbox
 class LocalSandbox(Sandbox):
     """
     Reference implementation.
-    
-    Future implementations:
-    - DockerSandbox
-    - FirecrackerSandbox
-    - RemoteSandbox
-    - PythonWorkspaceSandbox
     """
     
     _temp_prefix: str = "sandbox_exec_"
-    SUPPORTED_LANGUAGES: Set[str] = {"python"}
+    SUPPORTED_LANGUAGES: Set[str] = {"python", "shell"}
 
     def execute(self, request: SandboxRequest) -> SandboxResult:
         start_time = time.time()
@@ -69,12 +59,23 @@ class LocalSandbox(Sandbox):
                 failure_reason=f"Unsupported language: {request.language}"
             )
             
-        fd, temp_path = tempfile.mkstemp(suffix=".py", prefix=self._temp_prefix)
+        # FIX: Correct file extensions for Windows shell compatibility
+        is_windows = sys.platform == "win32"
+        if request.language == "shell":
+            suffix = ".bat" if is_windows else ".sh"
+        else:
+            suffix = ".py"
+            
+        fd, temp_path = tempfile.mkstemp(suffix=suffix, prefix=self._temp_prefix)
         try:
             with os.fdopen(fd, 'w') as f:
                 f.write(request.source)
                 
-            cmd = self._build_command(temp_path)
+            cmd = self._build_command(temp_path, request.language)
+            
+            process_env = os.environ.copy()
+            if request.env:
+                process_env.update(request.env)
             
             try:
                 process = subprocess.run(
@@ -82,7 +83,9 @@ class LocalSandbox(Sandbox):
                     capture_output=True,
                     text=True,
                     timeout=request.timeout,
-                    check=False
+                    check=False,
+                    cwd=request.cwd,
+                    env=process_env
                 )
                 duration = time.time() - start_time
                 
@@ -126,16 +129,17 @@ class LocalSandbox(Sandbox):
             except OSError:
                 pass
 
-    def _build_command(self, script_path: str) -> List[str]:
+    def _build_command(self, script_path: str, language: str) -> List[str]:
         """
-        Future command resolver.
-        
-        Responsible for selecting the correct runtime executable.
-        Will later support:
-        - Python (venv, conda, py launcher)
-        - Shell
-        - Node
-        - Docker
-        - Firecracker
+        Future command resolver. 
+        TODO: Extract to a CommandResolver interface to support multiple runtimes cleanly.
         """
-        return [sys.executable, script_path]
+        if language == "python":
+            return [sys.executable, script_path]
+        elif language == "shell":
+            # FIX: Correct Windows shell invocation
+            if sys.platform == "win32":
+                return ["cmd.exe", "/c", script_path]
+            return ["/bin/sh", script_path]
+        else:
+            return [sys.executable, script_path]

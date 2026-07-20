@@ -9,6 +9,10 @@ from hermes.workspace.context import ExecutionContext
 from hermes.workspace.workspace import Workspace
 from hermes.workspace.manager import WorkspaceManager
 from hermes.long_term_memory.manager import MemoryManager
+from hermes.filesystem import LocalFilesystem
+from hermes.artifacts import LocalArtifactRegistry
+from hermes.terminal import LocalTerminal
+from hermes.sandbox import LocalSandbox
 
 
 def test_execution_context_creation():
@@ -27,6 +31,9 @@ def test_workspace_creation():
     ws = Workspace()
     assert ws.workspace_id.startswith("ws_")
     assert isinstance(ws.memory, MemoryManager)
+    assert ws.filesystem is None
+    assert ws.artifact_registry is None
+    assert ws.terminal is None
     assert len(ws.execution_history) == 0
 
 def test_workspace_custom_id_and_memory():
@@ -34,6 +41,26 @@ def test_workspace_custom_id_and_memory():
     ws = Workspace(workspace_id="custom_ws", memory_manager=mem)
     assert ws.workspace_id == "custom_ws"
     assert ws.memory is mem
+
+def test_workspace_filesystem_injection():
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmpdir:
+        fs = LocalFilesystem(tmpdir)
+        ws = Workspace(filesystem=fs)
+        assert ws.filesystem is fs
+        ws.filesystem.write("test.txt", "hello")
+        assert ws.filesystem.read("test.txt") == "hello"
+
+def test_workspace_artifact_registry_injection():
+    registry = LocalArtifactRegistry()
+    ws = Workspace(artifact_registry=registry)
+    assert ws.artifact_registry is registry
+
+def test_workspace_terminal_injection():
+    sandbox = LocalSandbox()
+    term = LocalTerminal(sandbox)
+    ws = Workspace(terminal=term)
+    assert ws.terminal is term
 
 def test_workspace_execution_history():
     ws = Workspace()
@@ -53,17 +80,14 @@ def test_workspace_execution_history():
 def test_workspace_manager_crud():
     mgr = WorkspaceManager()
     
-    # Create
     ws1 = mgr.create_workspace()
     ws2 = mgr.create_workspace("explicit_id")
     assert len(mgr.list_workspaces()) == 2
     
-    # Read
     assert mgr.get_workspace(ws1.workspace_id) is ws1
     assert mgr.get_workspace("explicit_id") is ws2
     assert mgr.get_workspace("fake") is None
     
-    # Delete
     assert mgr.delete_workspace("explicit_id") is True
     assert mgr.delete_workspace("fake") is False
     assert len(mgr.list_workspaces()) == 1
