@@ -5,6 +5,7 @@ Tests for Workspace Context & Manager
 """
 
 import pytest
+import tempfile
 from hermes.workspace.context import ExecutionContext
 from hermes.workspace.workspace import Workspace
 from hermes.workspace.manager import WorkspaceManager
@@ -13,6 +14,8 @@ from hermes.filesystem import LocalFilesystem
 from hermes.artifacts import LocalArtifactRegistry
 from hermes.terminal import LocalTerminal
 from hermes.sandbox import LocalSandbox
+from hermes.python_workspace import LocalPythonWorkspace
+from hermes.tools import ToolManager, ToolRegistry
 
 
 def test_execution_context_creation():
@@ -34,6 +37,8 @@ def test_workspace_creation():
     assert ws.filesystem is None
     assert ws.artifact_registry is None
     assert ws.terminal is None
+    assert ws.python_workspace is None
+    assert ws.tool_manager is None
     assert len(ws.execution_history) == 0
 
 def test_workspace_custom_id_and_memory():
@@ -43,7 +48,6 @@ def test_workspace_custom_id_and_memory():
     assert ws.memory is mem
 
 def test_workspace_filesystem_injection():
-    import tempfile
     with tempfile.TemporaryDirectory() as tmpdir:
         fs = LocalFilesystem(tmpdir)
         ws = Workspace(filesystem=fs)
@@ -57,10 +61,24 @@ def test_workspace_artifact_registry_injection():
     assert ws.artifact_registry is registry
 
 def test_workspace_terminal_injection():
-    sandbox = LocalSandbox()
-    term = LocalTerminal(sandbox)
+    term = LocalTerminal(LocalSandbox())
     ws = Workspace(terminal=term)
     assert ws.terminal is term
+
+def test_workspace_python_workspace_injection():
+    term = LocalTerminal(LocalSandbox())
+    py_ws = LocalPythonWorkspace(term)
+    ws = Workspace(python_workspace=py_ws)
+    assert ws.python_workspace is py_ws
+
+def test_workspace_tool_manager_injection():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tm = ToolManager(ToolRegistry())
+        fs = LocalFilesystem(tmpdir)
+        ws = Workspace(filesystem=fs, tool_manager=tm)
+        # FIX: workspace_id already starts with "ws_", no need to add it again
+        assert tm.exists(f"{ws.workspace_id}.read_file")
+        assert tm.exists(f"{ws.workspace_id}.write_file")
 
 def test_workspace_execution_history():
     ws = Workspace()

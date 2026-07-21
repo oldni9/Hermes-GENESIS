@@ -1,0 +1,2665 @@
+(venv) C:\imp folders\ongoing presets\HERMES GPT\Hermes2-BASED\Hermes-GENESIS>pytest -v
+
+================================================= test session starts =================================================
+
+platform win32 -- Python 3.11.15, pytest-9.1.1, pluggy-1.6.0 -- C:\imp folders\ongoing presets\HERMES GPT\Hermes2-BASED\Hermes-GENESIS\venv\Scripts\python.exe
+
+cachedir: .pytest_cache
+
+rootdir: C:\imp folders\ongoing presets\HERMES GPT\Hermes2-BASED
+
+configfile: pytest.ini
+
+plugins: anyio-4.14.2
+
+collected 421 items
+
+
+
+tests\agent\test_agent.py::test_agent_initialization PASSED                                                      [  0%]
+
+tests\agent\test_agent.py::test_agent_with_tools PASSED                                                          [  0%]
+
+tests\agent\test_agent.py::test_agent_with_memory PASSED                                                         [  0%]
+
+tests\agent\test_exceptions.py::test_agent_error PASSED                                                          [  0%]
+
+tests\agent\test_exceptions.py::test_agent_not_found PASSED                                                      [  1%]
+
+tests\agent\test_exceptions.py::test_agent_memory_error PASSED                                                   [  1%]
+
+tests\agent\test_executor_builder.py::test_builder_basic_user_assistant PASSED                                   [  1%]
+
+tests\agent\test_executor_builder.py::test_builder_maps_tool_calls PASSED                                        [  1%]
+
+tests\agent\test_executor_builder.py::test_builder_appends_transient_messages PASSED                             [  2%]
+
+tests\agent\test_executor_context_factory.py::test_factory_builds_tool_context PASSED                            [  2%]
+
+tests\agent\test_executor_conversation_manager.py::test_append_system_only_if_empty PASSED                       [  2%]
+
+tests\agent\test_executor_conversation_manager.py::test_append_user_and_assistant PASSED                         [  2%]
+
+tests\agent\test_executor_conversation_manager.py::test_append_tool_calls PASSED                                 [  3%]
+
+tests\agent\test_executor_conversation_manager.py::test_append_tool_result_success PASSED                        [  3%]
+
+tests\agent\test_executor_conversation_manager.py::test_append_tool_result_empty_output PASSED                   [  3%]
+
+tests\agent\test_executor_conversation_manager.py::test_append_tool_result_failure PASSED                        [  3%]
+
+tests\agent\test_executor_loop.py::test_agent_no_tools PASSED                                                    [  4%]
+
+tests\agent\test_executor_loop.py::test_agent_injects_execution_context PASSED                                   [  4%]
+
+tests\agent\test_executor_loop.py::test_agent_retry_does_not_mutate_conversation PASSED                          [  4%]
+
+tests\agent\test_executor_loop.py::test_agent_abort_returns_error_response PASSED                                [  4%]
+
+tests\agent\test_executor_loop.py::test_agent_records_failure_history PASSED                                     [  4%]
+
+tests\agent\test_executor_loop.py::test_agent_full_loop_openai_ordering PASSED                                   [  5%]
+
+tests\agent\test_executor_tool_memory.py::test_tool_runner_successful_execution PASSED                           [  5%]
+
+tests\agent\test_executor_tool_memory.py::test_tool_runner_conversion_failure PASSED                             [  5%]
+
+tests\agent\test_executor_tool_memory.py::test_tool_runner_missing_result PASSED                                 [  5%]
+
+tests\agent\test_executor_tool_runner.py::test_tool_runner_successful_execution PASSED                           [  6%]
+
+tests\agent\test_executor_tool_runner.py::test_tool_runner_conversion_failure PASSED                             [  6%]
+
+tests\agent\test_executor_tool_runner.py::test_tool_runner_missing_result PASSED                                 [  6%]
+
+tests\agent\test_executor_tool_runner.py::test_tool_runner_passes_context PASSED                                 [  6%]
+
+tests\agent\test_memory.py::test_agent_memory_default_backend PASSED                                             [  7%]
+
+tests\agent\test_memory.py::test_agent_memory_with_custom_backend PASSED                                         [  7%]
+
+tests\agent\test_memory.py::test_agent_memory_add_search PASSED                                                  [  7%]
+
+tests\agent\test_memory.py::test_agent_memory_delete PASSED                                                      [  7%]
+
+tests\agent\test_memory.py::test_agent_memory_clear PASSED                                                       [  8%]
+
+tests\agent\test_memory.py::test_agent_memory_count PASSED                                                       [  8%]
+
+tests\agent\test_memory.py::test_agent_memory_len PASSED                                                         [  8%]
+
+tests\agent\test_memory.py::test_agent_memory_close PASSED                                                       [  8%]
+
+tests\agent\test_planner.py::test_hasher_deterministic_dict_and_string PASSED                                    [  9%]
+
+tests\agent\test_planner.py::test_hasher_different_arguments PASSED                                              [  9%]
+
+tests\agent\test_planner.py::test_validator_unknown_tool PASSED                                                  [  9%]
+
+tests\agent\test_planner.py::test_validator_disabled_tool PASSED                                                 [  9%]
+
+tests\agent\test_planner.py::test_validator_malformed_arguments PASSED                                           [  9%]
+
+tests\agent\test_planner.py::test_validator_valid_tool PASSED                                                    [ 10%]
+
+tests\agent\test_planner.py::test_tool_availability_rule_aborts_unknown_tool PASSED                              [ 10%]
+
+tests\agent\test_planner.py::test_tool_availability_rule_retries_malformed_args PASSED                           [ 10%]
+
+tests\agent\test_planner.py::test_repeated_tool_failure_rule_aborts PASSED                                       [ 10%]
+
+tests\agent\test_planner.py::test_repeated_tool_failure_rule_allows_new_args PASSED                              [ 11%]
+
+tests\agent\test_planner.py::test_reasoning_planner_records_telemetry PASSED                                     [ 11%]
+
+tests\agent\test_response.py::test_agent_response_basic PASSED                                                   [ 11%]
+
+tests\agent\test_response.py::test_agent_response_with_fields PASSED                                             [ 11%]
+
+tests\agent\test_runtime.py::test_create_agent PASSED                                                            [ 12%]
+
+tests\agent\test_runtime.py::test_create_agent_with_id PASSED                                                    [ 12%]
+
+tests\agent\test_runtime.py::test_get_agent PASSED                                                               [ 12%]
+
+tests\agent\test_runtime.py::test_get_agent_not_found PASSED                                                     [ 12%]
+
+tests\agent\test_runtime.py::test_list_agents PASSED                                                             [ 13%]
+
+tests\agent\test_runtime.py::test_destroy_agent PASSED                                                           [ 13%]
+
+tests\agent\test_runtime.py::test_reset_session PASSED                                                           [ 13%]
+
+tests\agent\test_runtime.py::test_reset_session_not_found PASSED                                                 [ 13%]
+
+tests\agent\test_runtime.py::test_execute PASSED                                                                 [ 14%]
+
+tests\agent\test_session.py::test_agent_session_initialization PASSED                                            [ 14%]
+
+tests\agent\test_session.py::test_agent_session_with_conversation PASSED                                         [ 14%]
+
+tests\agent\test_session.py::test_agent_session_metadata PASSED                                                  [ 14%]
+
+tests\artifacts\test_registry.py::test_registry_implements_protocol PASSED                                       [ 14%]
+
+tests\artifacts\test_registry.py::test_register_artifact PASSED                                                  [ 15%]
+
+tests\artifacts\test_registry.py::test_get_artifact PASSED                                                       [ 15%]
+
+tests\artifacts\test_registry.py::test_get_nonexistent_artifact PASSED                                           [ 15%]
+
+tests\artifacts\test_registry.py::test_list_artifacts PASSED                                                     [ 15%]
+
+tests\artifacts\test_registry.py::test_delete_artifact PASSED                                                    [ 16%]
+
+tests\artifacts\test_registry.py::test_artifact_immutability PASSED                                              [ 16%]
+
+tests\artifacts\test_registry.py::test_list_empty PASSED                                                         [ 16%]
+
+tests\artifacts\test_registry.py::test_delete_unknown PASSED                                                     [ 16%]
+
+tests\artifacts\test_registry.py::test_register_multiple_same_name PASSED                                        [ 17%]
+
+tests\core\test_content.py::TestContent::test_text_content_create PASSED                                         [ 17%]
+
+tests\core\test_content.py::TestContent::test_text_content_validation PASSED                                     [ 17%]
+
+tests\core\test_content.py::TestContent::test_text_content_serialization PASSED                                  [ 17%]
+
+tests\core\test_content.py::TestContent::test_text_content_hash PASSED                                           [ 18%]
+
+tests\core\test_content.py::TestContent::test_image_content_create PASSED                                        [ 18%]
+
+tests\core\test_content.py::TestContent::test_image_content_validation PASSED                                    [ 18%]
+
+tests\core\test_content.py::TestContent::test_image_content_serialization PASSED                                 [ 18%]
+
+tests\core\test_content.py::TestContent::test_audio_content_create PASSED                                        [ 19%]
+
+tests\core\test_content.py::TestContent::test_audio_content_validation PASSED                                    [ 19%]
+
+tests\core\test_content.py::TestContent::test_video_content_create PASSED                                        [ 19%]
+
+tests\core\test_content.py::TestContent::test_file_content_create PASSED                                         [ 19%]
+
+tests\core\test_content.py::TestContent::test_file_content_validation PASSED                                     [ 19%]
+
+tests\core\test_content.py::TestContent::test_file_content_serialization_bytes PASSED                            [ 20%]
+
+tests\core\test_content.py::TestContent::test_file_content_serialization_path PASSED                             [ 20%]
+
+tests\core\test_content.py::TestContent::test_structured_content_create PASSED                                   [ 20%]
+
+tests\core\test_content.py::TestContent::test_structured_content_serialization PASSED                            [ 20%]
+
+tests\core\test_content.py::TestContent::test_content_factory PASSED                                             [ 21%]
+
+tests\core\test_content.py::TestContent::test_register_custom_content PASSED                                     [ 21%]
+
+tests\core\test_content.py::TestContentCollection::test_collection_operations PASSED                             [ 21%]
+
+tests\core\test_content.py::TestContentCollection::test_collection_serialization PASSED                          [ 21%]
+
+tests\core\test_content.py::TestJSONType::test_recursive_json_type PASSED                                        [ 22%]
+
+tests\core\test_context.py::TestExecutionContext::test_create_empty PASSED                                       [ 22%]
+
+tests\core\test_context.py::TestExecutionContext::test_create_with_fields PASSED                                 [ 22%]
+
+tests\core\test_context.py::TestExecutionContext::test_clone_deep PASSED                                         [ 22%]
+
+tests\core\test_context.py::TestExecutionContext::test_clone_with_cloneable_object PASSED                        [ 23%]
+
+tests\core\test_context.py::TestExecutionContext::test_clone_with_non_cloneable_object PASSED                    [ 23%]
+
+tests\core\test_context.py::TestExecutionContext::test_to_dict PASSED                                            [ 23%]
+
+tests\core\test_context.py::TestExecutionContext::test_from_dict PASSED                                          [ 23%]
+
+tests\core\test_context.py::TestExecutionContext::test_copy_alias PASSED                                         [ 23%]
+
+tests\events\test_event_registry.py::TestEventBus::test_clear_removes_subscriptions_and_history PASSED           [ 24%]
+
+tests\events\test_event_registry.py::TestEventBus::test_history_preserves_every_published_event_in_order PASSED  [ 24%]
+
+tests\events\test_event_registry.py::TestEventBus::test_subscribe_and_publish_delivers_event PASSED              [ 24%]
+
+tests\events\test_event_registry.py::TestEventBus::test_unsubscribe_stops_future_notifications PASSED            [ 24%]
+
+tests\filesystem\test_local.py::test_filesystem_implements_protocol PASSED                                       [ 25%]
+
+tests\filesystem\test_local.py::test_write_and_read PASSED                                                       [ 25%]
+
+tests\filesystem\test_local.py::test_write_overwrites PASSED                                                     [ 25%]
+
+tests\filesystem\test_local.py::test_read_nonexistent PASSED                                                     [ 25%]
+
+tests\filesystem\test_local.py::test_delete_file PASSED                                                          [ 26%]
+
+tests\filesystem\test_local.py::test_delete_nonexistent PASSED                                                   [ 26%]
+
+tests\filesystem\test_local.py::test_mkdir_and_list_files PASSED                                                 [ 26%]
+
+tests\filesystem\test_local.py::test_path_traversal_prevention PASSED                                            [ 26%]
+
+tests\filesystem\test_local.py::test_absolute_path_rejection PASSED                                              [ 27%]
+
+tests\filesystem\test_local.py::test_nested_traversal_rejection PASSED                                           [ 27%]
+
+tests\filesystem\test_local.py::test_empty_path_rejected PASSED                                                  [ 27%]
+
+tests\filesystem\test_local.py::test_list_files_sorted PASSED                                                    [ 27%]
+
+tests\long_term_memory\test_memory_manager.py::test_add_validation_empty_content PASSED                          [ 28%]
+
+tests\long_term_memory\test_memory_manager.py::test_add_validation_not_string PASSED                             [ 28%]
+
+tests\long_term_memory\test_memory_manager.py::test_search_validation_not_string PASSED                          [ 28%]
+
+tests\long_term_memory\test_memory_manager.py::test_delegation_add_and_get PASSED                                [ 28%]
+
+tests\long_term_memory\test_memory_manager.py::test_delegation_update PASSED                                     [ 28%]
+
+tests\long_term_memory\test_memory_manager.py::test_delegation_delete PASSED                                     [ 29%]
+
+tests\long_term_memory\test_memory_manager.py::test_delegation_clear PASSED                                      [ 29%]
+
+tests\long_term_memory\test_sqlite_store.py::test_implements_memory_store_interface PASSED                       [ 29%]
+
+tests\long_term_memory\test_sqlite_store.py::test_add_record PASSED                                              [ 29%]
+
+tests\long_term_memory\test_sqlite_store.py::test_add_empty_metadata PASSED                                      [ 30%]
+
+tests\long_term_memory\test_sqlite_store.py::test_add_unserializable_metadata PASSED                             [ 30%]
+
+tests\long_term_memory\test_sqlite_store.py::test_update_record_merges_metadata PASSED                           [ 30%]
+
+tests\long_term_memory\test_sqlite_store.py::test_update_nonexistent PASSED                                      [ 30%]
+
+tests\long_term_memory\test_sqlite_store.py::test_delete_record PASSED                                           [ 31%]
+
+tests\long_term_memory\test_sqlite_store.py::test_delete_nonexistent PASSED                                      [ 31%]
+
+tests\long_term_memory\test_sqlite_store.py::test_clear_records PASSED                                           [ 31%]
+
+tests\long_term_memory\test_sqlite_store.py::test_get_record PASSED                                              [ 31%]
+
+tests\long_term_memory\test_sqlite_store.py::test_list_deterministic_order PASSED                                [ 32%]
+
+tests\long_term_memory\test_sqlite_store.py::test_search_deterministic_order PASSED                              [ 32%]
+
+tests\long_term_memory\test_sqlite_store.py::test_search_case_insensitive PASSED                                 [ 32%]
+
+tests\long_term_memory\test_sqlite_store.py::test_search_escapes_wildcards PASSED                                [ 32%]
+
+tests\long_term_memory\test_sqlite_store.py::test_persistence_across_reconnects PASSED                           [ 33%]
+
+tests\long_term_memory\test_sqlite_store.py::test_schema_versioning_migration PASSED                             [ 33%]
+
+tests\long_term_memory\test_sqlite_store.py::test_close_twice PASSED                                             [ 33%]
+
+tests\long_term_memory\test_sqlite_store.py::test_operations_after_close PASSED                                  [ 33%]
+
+tests\long_term_memory\test_sqlite_store.py::test_context_manager_closes PASSED                                  [ 33%]
+
+tests\long_term_memory\test_store.py::test_add_record PASSED                                                     [ 34%]
+
+tests\long_term_memory\test_store.py::test_add_empty_metadata PASSED                                             [ 34%]
+
+tests\long_term_memory\test_store.py::test_update_record PASSED                                                  [ 34%]
+
+tests\long_term_memory\test_store.py::test_update_nonexistent PASSED                                             [ 34%]
+
+tests\long_term_memory\test_store.py::test_delete_record PASSED                                                  [ 35%]
+
+tests\long_term_memory\test_store.py::test_delete_nonexistent PASSED                                             [ 35%]
+
+tests\long_term_memory\test_store.py::test_clear_records PASSED                                                  [ 35%]
+
+tests\long_term_memory\test_store.py::test_get_record PASSED                                                     [ 35%]
+
+tests\long_term_memory\test_store.py::test_list_deterministic_order PASSED                                       [ 36%]
+
+tests\long_term_memory\test_store.py::test_search_deterministic_order PASSED                                     [ 36%]
+
+tests\long_term_memory\test_store.py::test_search_case_insensitive PASSED                                        [ 36%]
+
+tests\long_term_memory\test_tools.py::test_remember_tool PASSED                                                  [ 36%]
+
+tests\long_term_memory\test_tools.py::test_forget_tool PASSED                                                    [ 37%]
+
+tests\long_term_memory\test_tools.py::test_forget_nonexistent PASSED                                             [ 37%]
+
+tests\long_term_memory\test_tools.py::test_search_memories_tool PASSED                                           [ 37%]
+
+tests\long_term_memory\test_tools.py::test_list_memories_tool PASSED                                             [ 37%]
+
+tests\long_term_memory\test_tools.py::test_clear_memory_tool PASSED                                              [ 38%]
+
+tests\long_term_memory\test_tools.py::test_register_tools_schema PASSED                                          [ 38%]
+
+tests\memory\semantic\test_in_memory_vector_store.py::test_add_and_search PASSED                                 [ 38%]
+
+tests\memory\semantic\test_in_memory_vector_store.py::test_add_many_atomic PASSED                                [ 38%]
+
+tests\memory\semantic\test_in_memory_vector_store.py::test_delete PASSED                                         [ 38%]
+
+tests\memory\semantic\test_in_memory_vector_store.py::test_update PASSED                                         [ 39%]
+
+tests\memory\semantic\test_in_memory_vector_store.py::test_get PASSED                                            [ 39%]
+
+tests\memory\semantic\test_in_memory_vector_store.py::test_exists PASSED                                         [ 39%]
+
+tests\memory\semantic\test_in_memory_vector_store.py::test_search_metadata_filter PASSED                         [ 39%]
+
+tests\memory\semantic\test_in_memory_vector_store.py::test_search_score_threshold PASSED                         [ 40%]
+
+tests\memory\semantic\test_in_memory_vector_store.py::test_search_handles_nan_inf PASSED                         [ 40%]
+
+tests\memory\semantic\test_in_memory_vector_store.py::test_clear PASSED                                          [ 40%]
+
+tests\memory\semantic\test_interfaces.py::test_embedding_provider_protocol PASSED                                [ 40%]
+
+tests\memory\semantic\test_interfaces.py::test_vector_store_protocol PASSED                                      [ 41%]
+
+tests\memory\semantic\test_models.py::test_document_creation PASSED                                              [ 41%]
+
+tests\memory\semantic\test_models.py::test_document_immutable PASSED                                             [ 41%]
+
+tests\memory\semantic\test_models.py::test_document_serialization PASSED                                         [ 41%]
+
+tests\memory\semantic\test_models.py::test_search_result PASSED                                                  [ 42%]
+
+tests\memory\semantic\test_retriever.py::test_retriever_single PASSED                                            [ 42%]
+
+tests\memory\semantic\test_retriever.py::test_retriever_many PASSED                                              [ 42%]
+
+tests\memory\semantic\test_retriever.py::test_retriever_metadata_filter PASSED                                   [ 42%]
+
+tests\memory\semantic\test_semantic_memory.py::test_semantic_memory_remember PASSED                              [ 42%]
+
+tests\memory\semantic\test_semantic_memory.py::test_semantic_memory_remember_many PASSED                         [ 43%]
+
+tests\memory\semantic\test_semantic_memory.py::test_semantic_memory_add_alias PASSED                             [ 43%]
+
+tests\memory\semantic\test_semantic_memory.py::test_semantic_memory_search PASSED                                [ 43%]
+
+tests\memory\semantic\test_semantic_memory.py::test_semantic_memory_delete PASSED                                [ 43%]
+
+tests\memory\semantic\test_semantic_memory.py::test_semantic_memory_clear PASSED                                 [ 44%]
+
+tests\memory\semantic\test_semantic_memory.py::test_semantic_memory_count PASSED                                 [ 44%]
+
+tests\memory\test_in_memory.py::test_in_memory_backend_add_search PASSED                                         [ 44%]
+
+tests\memory\test_in_memory.py::test_in_memory_backend_delete PASSED                                             [ 44%]
+
+tests\memory\test_in_memory.py::test_in_memory_backend_clear PASSED                                              [ 45%]
+
+tests\memory\test_in_memory.py::test_in_memory_backend_count PASSED                                              [ 45%]
+
+tests\memory\test_memory_backend.py::test_memory_backend_protocol PASSED                                         [ 45%]
+
+tests\memory\test_memory_backend.py::test_memory_capabilities PASSED                                             [ 45%]
+
+tests\memory\test_memory_backend.py::test_backend_protocol_conformance PASSED                                    [ 46%]
+
+tests\memory\test_memory_backend.py::test_backend_does_not_mutate_caller_entry PASSED                            [ 46%]
+
+tests\memory\test_memory_backend.py::test_memory_entry_equality PASSED                                           [ 46%]
+
+tests\memory\test_sqlite.py::test_sqlite_backend_add_search PASSED                                               [ 46%]
+
+tests\memory\test_sqlite.py::test_sqlite_backend_delete PASSED                                                   [ 47%]
+
+tests\memory\test_sqlite.py::test_sqlite_backend_clear PASSED                                                    [ 47%]
+
+tests\memory\test_sqlite.py::test_sqlite_backend_persistent PASSED                                               [ 47%]
+
+tests\memory\test_sqlite.py::test_sqlite_backend_count PASSED                                                    [ 47%]
+
+tests\memory\test_sqlite.py::test_sqlite_backend_context_manager PASSED                                          [ 47%]
+
+tests\planning\test_backend.py::test_backend_classify_success PASSED                                             [ 48%]
+
+tests\planning\test_backend.py::test_backend_classify_normalizes_whitespace PASSED                               [ 48%]
+
+tests\planning\test_backend.py::test_backend_classify_empty_response PASSED                                      [ 48%]
+
+tests\planning\test_backend.py::test_backend_classify_pipeline_failure PASSED                                    [ 48%]
+
+tests\planning\test_backend.py::test_backend_with_config PASSED                                                  [ 49%]
+
+tests\planning\test_capability_adapter.py::test_adapter_resolves_chat PASSED                                     [ 49%]
+
+tests\planning\test_capability_adapter.py::test_adapter_resolves_code PASSED                                     [ 49%]
+
+tests\planning\test_capability_adapter.py::test_adapter_resolves_reasoning PASSED                                [ 49%]
+
+tests\planning\test_capability_adapter.py::test_adapter_resolves_search_as_web PASSED                            [ 50%]
+
+tests\planning\test_capability_adapter.py::test_adapter_resolves_summarize_as_chat PASSED                        [ 50%]
+
+tests\planning\test_capability_adapter.py::test_adapter_resolves_translate_as_chat PASSED                        [ 50%]
+
+tests\planning\test_capability_adapter.py::test_adapter_handles_unknown_domain PASSED                            [ 50%]
+
+tests\planning\test_capability_adapter.py::test_adapter_raises_on_empty_plan PASSED                              [ 51%]
+
+tests\planning\test_capability_adapter.py::test_adapter_handles_multiple_steps PASSED                            [ 51%]
+
+tests\planning\test_execution_adapter.py::test_executor_resolves_and_executes_single_step PASSED                 [ 51%]
+
+tests\planning\test_execution_adapter.py::test_executor_executes_multiple_steps PASSED                           [ 51%]
+
+tests\planning\test_execution_adapter.py::test_executor_raises_on_unknown_domain PASSED                          [ 52%]
+
+tests\planning\test_execution_adapter.py::test_executor_raises_on_execution_failure PASSED                       [ 52%]
+
+tests\planning\test_execution_adapter.py::test_executor_raises_on_empty_plan PASSED                              [ 52%]
+
+tests\planning\test_plan_to_execution_graph.py::test_convert_single_step PASSED                                  [ 52%]
+
+tests\planning\test_plan_to_execution_graph.py::test_convert_multiple_steps PASSED                               [ 52%]
+
+tests\planning\test_plan_to_execution_graph.py::test_convert_with_dependencies PASSED                            [ 53%]
+
+tests\planning\test_plan_to_execution_graph.py::test_convert_handles_metadata PASSED                             [ 53%]
+
+tests\planning\test_plan_to_execution_graph.py::test_convert_raises_on_empty_plan PASSED                         [ 53%]
+
+tests\planning\test_plan_to_execution_graph.py::test_convert_raises_on_unknown_dependency PASSED                 [ 53%]
+
+tests\planning\test_plan_to_execution_graph.py::test_convert_raises_on_cycle PASSED                              [ 54%]
+
+tests\planning\test_plan_to_execution_graph.py::test_convert_raises_on_duplicate_id PASSED                       [ 54%]
+
+tests\planning\test_planner_integration.py::test_planning_to_execution_graph_integration PASSED                  [ 54%]
+
+tests\plugins\test_loader.py::test_loader_load_invalid_module PASSED                                             [ 54%]
+
+tests\plugins\test_loader.py::test_loader_load_module_without_plugin PASSED                                      [ 55%]
+
+tests\plugins\test_loader.py::test_loader_load_plugin PASSED                                                     [ 55%]
+
+tests\plugins\test_loader.py::test_loader_reload PASSED                                                          [ 55%]
+
+tests\plugins\test_manager.py::test_manager_register_plugin PASSED                                               [ 55%]
+
+tests\plugins\test_manager.py::test_manager_initialize_all PASSED                                                [ 56%]
+
+tests\plugins\test_manager.py::test_manager_initialize_failure_with_rollback PASSED                              [ 56%]
+
+tests\plugins\test_manager.py::test_manager_shutdown_all PASSED                                                  [ 56%]
+
+tests\plugins\test_manager.py::test_manager_unload_plugin PASSED                                                 [ 56%]
+
+tests\plugins\test_manager.py::test_manager_aggregation_and_cache PASSED                                         [ 57%]
+
+tests\plugins\test_manager.py::test_cache_invalidation_on_unload PASSED                                          [ 57%]
+
+tests\plugins\test_plugin_base.py::test_plugin_base_abstract PASSED                                              [ 57%]
+
+tests\plugins\test_plugin_base.py::test_plugin_lifecycle PASSED                                                  [ 57%]
+
+tests\plugins\test_plugin_base.py::test_plugin_capabilities_default PASSED                                       [ 57%]
+
+tests\plugins\test_plugin_base.py::test_plugin_immutability PASSED                                               [ 58%]
+
+tests\plugins\test_registry.py::test_registry_register PASSED                                                    [ 58%]
+
+tests\plugins\test_registry.py::test_registry_duplicate PASSED                                                   [ 58%]
+
+tests\plugins\test_registry.py::test_registry_invalid_plugin PASSED                                              [ 58%]
+
+tests\plugins\test_registry.py::test_registry_remove PASSED                                                      [ 59%]
+
+tests\plugins\test_registry.py::test_registry_list PASSED                                                        [ 59%]
+
+tests\plugins\test_registry.py::test_registry_len_iter PASSED                                                    [ 59%]
+
+tests\python_workspace\test_local.py::test_package_exports PASSED                                                [ 59%]
+
+tests\python_workspace\test_local.py::test_workspace_implements_protocol PASSED                                  [ 60%]
+
+tests\python_workspace\test_local.py::test_session_implements_protocol PASSED                                    [ 60%]
+
+tests\python_workspace\test_local.py::test_create_session_defaults PASSED                                        [ 60%]
+
+tests\python_workspace\test_local.py::test_run_success PASSED                                                    [ 60%]
+
+tests\python_workspace\test_local.py::test_run_syntax_error PASSED                                               [ 61%]
+
+tests\python_workspace\test_local.py::test_run_runtime_exception PASSED                                          [ 61%]
+
+tests\python_workspace\test_local.py::test_timeout_propagation PASSED                                            [ 61%]
+
+tests\python_workspace\test_local.py::test_run_pip_success PASSED                                                [ 61%]
+
+tests\python_workspace\test_local.py::test_run_pip_failure PASSED                                                [ 61%]
+
+tests\python_workspace\test_local.py::test_run_pip_timeout PASSED                                                [ 62%]
+
+tests\python_workspace\test_local.py::test_run_pip_execution_id_propagation PASSED                               [ 62%]
+
+tests\python_workspace\test_local.py::test_command_construction PASSED                                           [ 62%]
+
+tests\python_workspace\test_local.py::test_cwd_propagation PASSED                                                [ 62%]
+
+tests\python_workspace\test_local.py::test_temp_file_cleanup PASSED                                              [ 63%]
+
+tests\python_workspace\test_local.py::test_close_raises_on_run PASSED                                            [ 63%]
+
+tests\python_workspace\test_local.py::test_close_is_idempotent PASSED                                            [ 63%]
+
+tests\reasoning\test_optimizer.py::test_validate_valid_graph PASSED                                              [ 63%]
+
+tests\reasoning\test_optimizer.py::test_validate_missing_dependency PASSED                                       [ 64%]
+
+tests\reasoning\test_optimizer.py::test_validate_cycle PASSED                                                    [ 64%]
+
+tests\reasoning\test_optimizer.py::test_remove_redundant_edges PASSED                                            [ 64%]
+
+tests\reasoning\test_optimizer.py::test_topological_order PASSED                                                 [ 64%]
+
+tests\reasoning\test_optimizer.py::test_critical_path_length PASSED                                              [ 65%]
+
+tests\reasoning\test_optimizer.py::test_statistics PASSED                                                        [ 65%]
+
+tests\reasoning\test_optimizer.py::test_optimize PASSED                                                          [ 65%]
+
+tests\reasoning\test_optimizer.py::test_redundant_edge_removal_preserves_order PASSED                            [ 65%]
+
+tests\reasoning\test_optimizer_pipeline.py::test_planning_to_scheduler_with_optimizer PASSED                     [ 66%]
+
+tests\sandbox\test_local.py::test_sandbox_implements_protocol PASSED                                             [ 66%]
+
+tests\sandbox\test_local.py::test_successful_execution PASSED                                                    [ 66%]
+
+tests\sandbox\test_local.py::test_stderr_capture PASSED                                                          [ 66%]
+
+tests\sandbox\test_local.py::test_timeout_enforcement PASSED                                                     [ 66%]
+
+tests\sandbox\test_local.py::test_unsupported_language PASSED                                                    [ 67%]
+
+tests\sandbox\test_local.py::test_temp_file_cleanup PASSED                                                       [ 67%]
+
+tests\terminal\test_local.py::test_terminal_implements_protocol PASSED                                           [ 67%]
+
+tests\terminal\test_local.py::test_create_session_defaults PASSED                                                [ 67%]
+
+tests\terminal\test_local.py::test_run_simple_command PASSED                                                     [ 68%]
+
+tests\terminal\test_local.py::test_failed_command PASSED                                                         [ 68%]
+
+tests\terminal\test_local.py::test_timeout_propagation PASSED                                                    [ 68%]
+
+tests\terminal\test_local.py::test_cwd_passed_to_sandbox PASSED                                                  [ 68%]
+
+tests\terminal\test_local.py::test_env_passed_to_sandbox PASSED                                                  [ 69%]
+
+tests\terminal\test_local.py::test_close_raises_on_run PASSED                                                    [ 69%]
+
+tests\test_chat_pipeline.py::test_chat_send_uses_pipeline_when_provided PASSED                                   [ 69%]
+
+tests\test_chat_pipeline.py::test_chat_send_falls_back_to_manager_when_no_pipeline PASSED                        [ 69%]
+
+tests\test_chat_pipeline.py::test_chat_send_with_provider_override_uses_override PASSED                          [ 70%]
+
+tests\test_chat_pipeline.py::test_chat_send_with_model_override_uses_override PASSED                             [ 70%]
+
+tests\test_chat_pipeline.py::test_chat_manager_property_returns_manager PASSED                                   [ 70%]
+
+tests\test_chat_pipeline.py::test_chat_pipeline_property_returns_pipeline PASSED                                 [ 70%]
+
+tests\test_chat_pipeline.py::test_chat_without_manager_or_pipeline_uses_default_manager PASSED                   [ 71%]
+
+tests\test_chat_pipeline.py::test_chat_send_raises_error_when_no_provider PASSED                                 [ 71%]
+
+tests\test_chat_pipeline.py::test_chat_send_raises_error_when_streaming PASSED                                   [ 71%]
+
+tests\test_contracts.py::test_execution_context PASSED                                                           [ 71%]
+
+tests\test_contracts.py::test_execution_request_protocol PASSED                                                  [ 71%]
+
+tests\test_contracts.py::test_dummy_engine_protocol PASSED                                                       [ 72%]
+
+tests\test_middleware.py::test_middleware_context PASSED                                                         [ 72%]
+
+tests\test_middleware.py::test_chain_executes_before_in_order PASSED                                             [ 72%]
+
+tests\test_middleware.py::test_chain_executes_after_in_reverse_order PASSED                                      [ 72%]
+
+tests\test_middleware.py::test_chain_short_circuit PASSED                                                        [ 73%]
+
+tests\test_middleware.py::test_chain_propagates_exception PASSED                                                 [ 73%]
+
+tests\test_middleware.py::test_pipeline_without_middleware PASSED                                                [ 73%]
+
+tests\test_middleware.py::test_pipeline_with_middleware PASSED                                                   [ 73%]
+
+tests\test_middleware.py::test_pipeline_middleware_modifies_request PASSED                                       [ 74%]
+
+tests\test_middleware.py::test_pipeline_middleware_modifies_response PASSED                                      [ 74%]
+
+tests\test_middleware.py::test_pipeline_short_circuit PASSED                                                     [ 74%]
+
+tests\test_middleware.py::test_pipeline_short_circuit_without_response_raises_error PASSED                       [ 74%]
+
+tests\test_middleware.py::test_pipeline_middleware_error_before PASSED                                           [ 75%]
+
+tests\test_middleware.py::test_pipeline_middleware_error_after PASSED                                            [ 75%]
+
+tests\test_middleware.py::test_pipeline_cache_still_works_with_middleware PASSED                                 [ 75%]
+
+tests\test_middleware.py::test_pipeline_cache_hit_skips_middleware PASSED                                        [ 75%]
+
+tests\test_orchestrator.py::test_execution_plan_defaults PASSED                                                  [ 76%]
+
+tests\test_orchestrator.py::test_execution_plan_with_options PASSED                                              [ 76%]
+
+tests\test_orchestrator.py::test_execution_plan_to_dict PASSED                                                   [ 76%]
+
+tests\test_orchestrator.py::test_retry_policy_success PASSED                                                     [ 76%]
+
+tests\test_orchestrator.py::test_retry_policy_retry PASSED                                                       [ 76%]
+
+tests\test_orchestrator.py::test_retry_policy_exhausted PASSED                                                   [ 77%]
+
+tests\test_orchestrator.py::test_retry_policy_non_retryable PASSED                                               [ 77%]
+
+tests\test_orchestrator.py::test_retry_policy_should_retry PASSED                                                [ 77%]
+
+tests\test_orchestrator.py::test_provider_selector_select PASSED                                                 [ 77%]
+
+tests\test_orchestrator.py::test_provider_selector_explicit_provider PASSED                                      [ 78%]
+
+tests\test_orchestrator.py::test_provider_selector_explicit_model PASSED                                         [ 78%]
+
+tests\test_orchestrator.py::test_provider_selector_no_provider PASSED                                            [ 78%]
+
+tests\test_orchestrator.py::test_provider_selector_preferred_not_found PASSED                                    [ 78%]
+
+tests\test_orchestrator.py::test_response_processor_process PASSED                                               [ 79%]
+
+tests\test_orchestrator.py::test_response_processor_error PASSED                                                 [ 79%]
+
+tests\test_orchestrator.py::test_orchestrator_execute PASSED                                                     [ 79%]
+
+tests\test_orchestrator.py::test_orchestrator_validation PASSED                                                  [ 79%]
+
+tests\test_orchestrator.py::test_orchestrator_provider_error PASSED                                              [ 80%]
+
+tests\test_orchestrator.py::test_orchestrator_unexpected_error PASSED                                            [ 80%]
+
+tests\test_pipeline_integration.py::test_pipeline_delegates_to_orchestrator PASSED                               [ 80%]
+
+tests\test_pipeline_integration.py::test_pipeline_cache_hit PASSED                                               [ 80%]
+
+tests\test_pipeline_integration.py::test_pipeline_cache_miss PASSED                                              [ 80%]
+
+tests\test_pipeline_integration.py::test_pipeline_cache_disabled PASSED                                          [ 81%]
+
+tests\test_pipeline_integration.py::test_pipeline_execute_default PASSED                                         [ 81%]
+
+tests\test_provider_tool_adapter.py::TestNormalizeArguments::test_dict PASSED                                    [ 81%]
+
+tests\test_provider_tool_adapter.py::TestNormalizeArguments::test_json_object PASSED                             [ 81%]
+
+tests\test_provider_tool_adapter.py::TestNormalizeArguments::test_json_array PASSED                              [ 82%]
+
+tests\test_provider_tool_adapter.py::TestNormalizeArguments::test_json_primitive PASSED                          [ 82%]
+
+tests\test_provider_tool_adapter.py::TestNormalizeArguments::test_empty_string PASSED                            [ 82%]
+
+tests\test_provider_tool_adapter.py::TestNormalizeArguments::test_whitespace PASSED                              [ 82%]
+
+tests\test_provider_tool_adapter.py::TestNormalizeArguments::test_none PASSED                                    [ 83%]
+
+tests\test_provider_tool_adapter.py::TestNormalizeArguments::test_raw_string PASSED                              [ 83%]
+
+tests\test_provider_tool_adapter.py::TestNormalizeArguments::test_malformed_json PASSED                          [ 83%]
+
+tests\test_provider_tool_adapter.py::TestNormalizeArguments::test_unsupported_type PASSED                        [ 83%]
+
+tests\test_provider_tool_adapter.py::TestConvertProviderToolCalls::test_single_call PASSED                       [ 84%]
+
+tests\test_provider_tool_adapter.py::TestConvertProviderToolCalls::test_multiple_calls_order PASSED              [ 84%]
+
+tests\test_provider_tool_adapter.py::TestConvertProviderToolCalls::test_mixed_conversion PASSED                  [ 84%]
+
+tests\test_provider_tool_adapter.py::TestConvertProviderToolCalls::test_json_string_argument PASSED              [ 84%]
+
+tests\test_retriever.py::TestKnowledgeRetriever::test_retrieve PASSED                                            [ 85%]
+
+tests\test_retriever.py::TestKnowledgeRetriever::test_retrieve_with_scores PASSED                                [ 85%]
+
+tests\test_retriever.py::TestKnowledgeRetriever::test_retrieve_by_id PASSED                                      [ 85%]
+
+tests\test_streaming.py::test_stream_uses_pipeline_when_provided PASSED                                          [ 85%]
+
+tests\test_streaming.py::test_stream_falls_back_to_manager_when_no_pipeline PASSED                               [ 85%]
+
+tests\test_streaming.py::test_stream_appends_delta_to_conversation PASSED                                        [ 86%]
+
+tests\test_streaming.py::test_stream_handles_error_cleanup PASSED                                                [ 86%]
+
+tests\test_streaming.py::test_stream_close_propagates PASSED                                                     [ 86%]
+
+tests\test_tool_execution.py::test_single_tool_execution PASSED                                                  [ 86%]
+
+tests\test_tool_execution.py::test_multiple_tool_calls PASSED                                                    [ 87%]
+
+tests\test_tool_execution.py::test_missing_tool PASSED                                                           [ 87%]
+
+tests\test_tool_execution.py::test_partial_failure PASSED                                                        [ 87%]
+
+tests\test_tool_execution.py::test_conversion_error PASSED                                                       [ 87%]
+
+tests\test_tool_execution.py::test_json_string_arguments PASSED                                                  [ 88%]
+
+tests\test_tool_execution.py::test_empty_arguments PASSED                                                        [ 88%]
+
+tests\test_tool_execution.py::test_no_tool_calls PASSED                                                          [ 88%]
+
+tests\test_tool_execution.py::test_tool_manager_none PASSED                                                      [ 88%]
+
+tests\test_tool_execution.py::test_provider_error_prevents_tool_execution PASSED                                 [ 89%]
+
+tests\test_tool_execution.py::test_response_tool_calls_not_mutated PASSED                                        [ 89%]
+
+tests\test_tool_execution.py::test_ordering_responseprocessor_before_tools PASSED                                [ 89%]
+
+tests\test_tool_execution.py::test_context_propagation PASSED                                                    [ 89%]
+
+tests\test_tool_integration.py::test_workspace_registers_file_tools PASSED                                       [ 90%]
+
+tests\test_tool_integration.py::test_orchestrator_executes_tools PASSED                                          [ 90%]
+
+tests\test_tool_integration.py::test_orchestrator_without_tool_manager PASSED                                    [ 90%]
+
+tests\test_tool_integration.py::test_multiple_workspaces_namespace_isolation PASSED                              [ 90%]
+
+tests\test_tool_integration.py::test_duplicate_workspace_registration PASSED                                     [ 90%]
+
+tests\test_tool_integration.py::test_workspace_deletion_cleans_tools FAILED                                      [ 91%]
+
+tests\test_tool_integration.py::test_workspace_close_is_idempotent FAILED                                        [ 91%]
+
+tests\test_tool_integration.py::test_deleting_multiple_workspaces FAILED                                         [ 91%]
+
+tests\test_tool_integration.py::test_math_tool_rejects_functions PASSED                                          [ 91%]
+
+tests\test_tool_integration.py::test_global_vs_workspace_lookup_precedence PASSED                                [ 92%]
+
+tests\test_tool_integration.py::test_execution_after_deleting_other_workspace FAILED                             [ 92%]
+
+tests\test_workspace.py::test_execution_context_creation PASSED                                                  [ 92%]
+
+tests\test_workspace.py::test_execution_context_immutability PASSED                                              [ 92%]
+
+tests\test_workspace.py::test_workspace_creation PASSED                                                          [ 93%]
+
+tests\test_workspace.py::test_workspace_custom_id_and_memory PASSED                                              [ 93%]
+
+tests\test_workspace.py::test_workspace_filesystem_injection PASSED                                              [ 93%]
+
+tests\test_workspace.py::test_workspace_artifact_registry_injection PASSED                                       [ 93%]
+
+tests\test_workspace.py::test_workspace_terminal_injection PASSED                                                [ 94%]
+
+tests\test_workspace.py::test_workspace_python_workspace_injection PASSED                                        [ 94%]
+
+tests\test_workspace.py::test_workspace_tool_manager_injection FAILED                                            [ 94%]
+
+tests\test_workspace.py::test_workspace_execution_history PASSED                                                 [ 94%]
+
+tests\test_workspace.py::test_workspace_manager_crud PASSED                                                      [ 95%]
+
+tests\test_workspace.py::test_workspace_manager_duplicate_id PASSED                                              [ 95%]
+
+tests\tools\test_builtin.py::test_math_tool_basic PASSED                                                         [ 95%]
+
+tests\tools\test_builtin.py::test_math_tool_rejects_code PASSED                                                  [ 95%]
+
+tests\tools\test_builtin.py::test_time_tool PASSED                                                               [ 95%]
+
+tests\tools\test_builtin.py::test_file_tools PASSED                                                              [ 96%]
+
+tests\tools\test_decorator.py::test_tool_decorator_basic PASSED                                                  [ 96%]
+
+tests\tools\test_decorator.py::test_tool_decorator_skips_self PASSED                                             [ 96%]
+
+tests\tools\test_manager.py::test_tool_manager_execution PASSED                                                  [ 96%]
+
+tests\tools\test_manager.py::test_tool_manager_execution_id_propagation PASSED                                   [ 97%]
+
+tests\tools\test_registry.py::test_register_and_get PASSED                                                       [ 97%]
+
+tests\tools\test_registry.py::test_alias_lookup_global PASSED                                                    [ 97%]
+
+tests\tools\test_registry.py::test_namespaced_alias_lookup PASSED                                                [ 97%]
+
+tests\tools\test_registry.py::test_duplicate_alias_rejected PASSED                                               [ 98%]
+
+tests\tools\test_registry.py::test_registry_replace PASSED                                                       [ 98%]
+
+tests\tools\test_registry.py::test_registry_replace_safe_on_failure PASSED                                       [ 98%]
+
+tests\tools\test_registry.py::test_registry_clear PASSED                                                         [ 98%]
+
+tests\tools\test_registry.py::test_registry_search PASSED                                                        [ 99%]
+
+tests\tools\test_registry.py::test_registry_names_and_namespaces PASSED                                          [ 99%]
+
+tests\tools\test_registry.py::test_concurrent_stress_test PASSED                                                 [ 99%]
+
+tests\tools\test_registry.py::test_iteration_is_snapshot PASSED                                                  [ 99%]
+
+tests\tools\test_registry.py::test_lookup_precedence_global_vs_workspace PASSED                                  [100%]
+
+
+
+====================================================== FAILURES =======================================================
+
+________________________________________ test_workspace_deletion_cleans_tools _________________________________________
+
+
+
+tool_manager = <hermes.tools.manager.ToolManager object at 0x000001B36C059810>
+
+
+
+    def test_workspace_deletion_cleans_tools(tool_manager):
+
+        """Test that deleting a workspace unregisters its tools."""
+
+        mgr = WorkspaceManager()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+
+            fs = LocalFilesystem(tmpdir)
+
+            ws = mgr.create_workspace(workspace_id="ws_cleanup", filesystem=fs, tool_manager=tool_manager)
+
+
+
+            assert tool_manager.exists("ws_cleanup.read_file")
+
+
+
+>           result = mgr.delete_workspace("ws_cleanup")
+
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+
+tests\test_tool_integration.py:141:
+
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+hermes\workspace\manager.py:27: in delete_workspace
+
+    ws.close()
+
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+
+
+self = <hermes.workspace.workspace.Workspace object at 0x000001B36C05A550>
+
+
+
+    def close(self) -> None:
+
+        if self._closed:
+
+            print("Workspace already closed.")
+
+            return
+
+
+
+        print("\n" + "=" * 80)
+
+        print("WORKSPACE CLOSE")
+
+        print("=" * 80)
+
+        print(f"Workspace : {self.workspace_id}")
+
+
+
+        self._closed = True
+
+
+
+        if self._tool_manager:
+
+            print(f"ToolManager : {id(self._tool_manager)}")
+
+            print(f"Registry    : {id(self._tool_manager.registry)}")
+
+            print()
+
+
+
+            for full_name in sorted(self._registered_tool_names):
+
+                print(f"Removing : {full_name}")
+
+>               self._tool_manager.unregister(full_name)
+
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+E               AttributeError: 'ToolManager' object has no attribute 'unregister'
+
+
+
+hermes\workspace\workspace.py:172: AttributeError
+
+------------------------------------------------ Captured stdout setup ------------------------------------------------
+
+
+
+--------------------------------------------------------------------------------
+
+TOOL MANAGER REGISTER
+
+--------------------------------------------------------------------------------
+
+ToolManager : 1870123079696
+
+Registry    : 1870123086288
+
+Tool        : calculate
+
+
+
+Registry.register()
+
+Registry : 1870123086288
+
+Incoming : calculate
+
+Key used : calculate
+
+Registry keys:
+
+  calculate
+
+Registry now contains:
+
+  calculate
+
+--------------------------------------------------------------------------------
+
+
+
+--------------------------------------------------------------------------------
+
+TOOL MANAGER REGISTER
+
+--------------------------------------------------------------------------------
+
+ToolManager : 1870123079696
+
+Registry    : 1870123086288
+
+Tool        : get_current_time
+
+
+
+Registry.register()
+
+Registry : 1870123086288
+
+Incoming : get_current_time
+
+Key used : get_current_time
+
+Registry keys:
+
+  calculate
+
+  get_current_time
+
+Registry now contains:
+
+  calculate
+
+  get_current_time
+
+--------------------------------------------------------------------------------
+
+------------------------------------------------ Captured stdout call -------------------------------------------------
+
+
+
+================================================================================
+
+WORKSPACE CREATED
+
+================================================================================
+
+Workspace object      : 1870123083088
+
+Workspace ID          : ws_cleanup
+
+MemoryManager         : 1870123088592
+
+Filesystem           : 1870123087632
+
+ArtifactRegistry     : None
+
+Terminal             : None
+
+PythonWorkspace      : None
+
+ToolManager          : 1870123079696
+
+Registry             : 1870123086288
+
+================================================================================
+
+
+
+REGISTERING FILE TOOLS
+
+--------------------------------------------------------------------------------
+
+Namespace : ws_cleanup
+
+
+
+Registering : ws_cleanup.read_file
+
+
+
+--------------------------------------------------------------------------------
+
+TOOL MANAGER REGISTER
+
+--------------------------------------------------------------------------------
+
+ToolManager : 1870123079696
+
+Registry    : 1870123086288
+
+Tool        : ws_cleanup.read_file
+
+
+
+Registry.register()
+
+Registry : 1870123086288
+
+Incoming : ws_cleanup.read_file
+
+Key used : ws_cleanup.read_file
+
+Registry keys:
+
+  calculate
+
+  get_current_time
+
+  ws_cleanup.read_file
+
+Registry now contains:
+
+  calculate
+
+  get_current_time
+
+  ws_cleanup.read_file
+
+--------------------------------------------------------------------------------
+
+SUCCESS
+
+
+
+Registering : ws_cleanup.write_file
+
+
+
+--------------------------------------------------------------------------------
+
+TOOL MANAGER REGISTER
+
+--------------------------------------------------------------------------------
+
+ToolManager : 1870123079696
+
+Registry    : 1870123086288
+
+Tool        : ws_cleanup.write_file
+
+
+
+Registry.register()
+
+Registry : 1870123086288
+
+Incoming : ws_cleanup.write_file
+
+Key used : ws_cleanup.write_file
+
+Registry keys:
+
+  calculate
+
+  get_current_time
+
+  ws_cleanup.read_file
+
+  ws_cleanup.write_file
+
+Registry now contains:
+
+  calculate
+
+  get_current_time
+
+  ws_cleanup.read_file
+
+  ws_cleanup.write_file
+
+--------------------------------------------------------------------------------
+
+SUCCESS
+
+
+
+Registered tools:
+
+  ws_cleanup.read_file
+
+  ws_cleanup.write_file
+
+--------------------------------------------------------------------------------
+
+
+
+================================================================================
+
+WORKSPACE CLOSE
+
+================================================================================
+
+Workspace : ws_cleanup
+
+ToolManager : 1870123079696
+
+Registry    : 1870123086288
+
+
+
+Removing : ws_cleanup.read_file
+
+_________________________________________ test_workspace_close_is_idempotent __________________________________________
+
+
+
+tool_manager = <hermes.tools.manager.ToolManager object at 0x000001B36BF66B90>
+
+
+
+    def test_workspace_close_is_idempotent(tool_manager):
+
+        """Test that calling close() multiple times does not error."""
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+
+            fs = LocalFilesystem(tmpdir)
+
+            ws = Workspace(filesystem=fs, tool_manager=tool_manager)
+
+>           ws.close()
+
+
+
+tests\test_tool_integration.py:152:
+
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+
+
+self = <hermes.workspace.workspace.Workspace object at 0x000001B36BFDF650>
+
+
+
+    def close(self) -> None:
+
+        if self._closed:
+
+            print("Workspace already closed.")
+
+            return
+
+
+
+        print("\n" + "=" * 80)
+
+        print("WORKSPACE CLOSE")
+
+        print("=" * 80)
+
+        print(f"Workspace : {self.workspace_id}")
+
+
+
+        self._closed = True
+
+
+
+        if self._tool_manager:
+
+            print(f"ToolManager : {id(self._tool_manager)}")
+
+            print(f"Registry    : {id(self._tool_manager.registry)}")
+
+            print()
+
+
+
+            for full_name in sorted(self._registered_tool_names):
+
+                print(f"Removing : {full_name}")
+
+>               self._tool_manager.unregister(full_name)
+
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+E               AttributeError: 'ToolManager' object has no attribute 'unregister'
+
+
+
+hermes\workspace\workspace.py:172: AttributeError
+
+------------------------------------------------ Captured stdout setup ------------------------------------------------
+
+
+
+--------------------------------------------------------------------------------
+
+TOOL MANAGER REGISTER
+
+--------------------------------------------------------------------------------
+
+ToolManager : 1870122085264
+
+Registry    : 1870122086224
+
+Tool        : calculate
+
+
+
+Registry.register()
+
+Registry : 1870122086224
+
+Incoming : calculate
+
+Key used : calculate
+
+Registry keys:
+
+  calculate
+
+Registry now contains:
+
+  calculate
+
+--------------------------------------------------------------------------------
+
+
+
+--------------------------------------------------------------------------------
+
+TOOL MANAGER REGISTER
+
+--------------------------------------------------------------------------------
+
+ToolManager : 1870122085264
+
+Registry    : 1870122086224
+
+Tool        : get_current_time
+
+
+
+Registry.register()
+
+Registry : 1870122086224
+
+Incoming : get_current_time
+
+Key used : get_current_time
+
+Registry keys:
+
+  calculate
+
+  get_current_time
+
+Registry now contains:
+
+  calculate
+
+  get_current_time
+
+--------------------------------------------------------------------------------
+
+------------------------------------------------ Captured stdout call -------------------------------------------------
+
+
+
+================================================================================
+
+WORKSPACE CREATED
+
+================================================================================
+
+Workspace object      : 1870122579536
+
+Workspace ID          : ws_6cdede9675d6487682bac151fb53712b
+
+MemoryManager         : 1870122578320
+
+Filesystem           : 1870122574480
+
+ArtifactRegistry     : None
+
+Terminal             : None
+
+PythonWorkspace      : None
+
+ToolManager          : 1870122085264
+
+Registry             : 1870122086224
+
+================================================================================
+
+
+
+REGISTERING FILE TOOLS
+
+--------------------------------------------------------------------------------
+
+Namespace : ws_6cdede9675d6487682bac151fb53712b
+
+
+
+Registering : ws_6cdede9675d6487682bac151fb53712b.read_file
+
+
+
+--------------------------------------------------------------------------------
+
+TOOL MANAGER REGISTER
+
+--------------------------------------------------------------------------------
+
+ToolManager : 1870122085264
+
+Registry    : 1870122086224
+
+Tool        : ws_6cdede9675d6487682bac151fb53712b.read_file
+
+
+
+Registry.register()
+
+Registry : 1870122086224
+
+Incoming : ws_6cdede9675d6487682bac151fb53712b.read_file
+
+Key used : ws_6cdede9675d6487682bac151fb53712b.read_file
+
+Registry keys:
+
+  calculate
+
+  get_current_time
+
+  ws_6cdede9675d6487682bac151fb53712b.read_file
+
+Registry now contains:
+
+  calculate
+
+  get_current_time
+
+  ws_6cdede9675d6487682bac151fb53712b.read_file
+
+--------------------------------------------------------------------------------
+
+SUCCESS
+
+
+
+Registering : ws_6cdede9675d6487682bac151fb53712b.write_file
+
+
+
+--------------------------------------------------------------------------------
+
+TOOL MANAGER REGISTER
+
+--------------------------------------------------------------------------------
+
+ToolManager : 1870122085264
+
+Registry    : 1870122086224
+
+Tool        : ws_6cdede9675d6487682bac151fb53712b.write_file
+
+
+
+Registry.register()
+
+Registry : 1870122086224
+
+Incoming : ws_6cdede9675d6487682bac151fb53712b.write_file
+
+Key used : ws_6cdede9675d6487682bac151fb53712b.write_file
+
+Registry keys:
+
+  calculate
+
+  get_current_time
+
+  ws_6cdede9675d6487682bac151fb53712b.read_file
+
+  ws_6cdede9675d6487682bac151fb53712b.write_file
+
+Registry now contains:
+
+  calculate
+
+  get_current_time
+
+  ws_6cdede9675d6487682bac151fb53712b.read_file
+
+  ws_6cdede9675d6487682bac151fb53712b.write_file
+
+--------------------------------------------------------------------------------
+
+SUCCESS
+
+
+
+Registered tools:
+
+  ws_6cdede9675d6487682bac151fb53712b.read_file
+
+  ws_6cdede9675d6487682bac151fb53712b.write_file
+
+--------------------------------------------------------------------------------
+
+
+
+================================================================================
+
+WORKSPACE CLOSE
+
+================================================================================
+
+Workspace : ws_6cdede9675d6487682bac151fb53712b
+
+ToolManager : 1870122085264
+
+Registry    : 1870122086224
+
+
+
+Removing : ws_6cdede9675d6487682bac151fb53712b.read_file
+
+__________________________________________ test_deleting_multiple_workspaces __________________________________________
+
+
+
+tool_manager = <hermes.tools.manager.ToolManager object at 0x000001B36C058210>
+
+
+
+    def test_deleting_multiple_workspaces(tool_manager):
+
+        """Test deleting two workspaces in different orders."""
+
+        mgr = WorkspaceManager()
+
+        with tempfile.TemporaryDirectory() as tmpdir1, tempfile.TemporaryDirectory() as tmpdir2:
+
+            fs1 = LocalFilesystem(tmpdir1)
+
+            fs2 = LocalFilesystem(tmpdir2)
+
+
+
+            ws1 = mgr.create_workspace(workspace_id="ws_1", filesystem=fs1, tool_manager=tool_manager)
+
+            ws2 = mgr.create_workspace(workspace_id="ws_2", filesystem=fs2, tool_manager=tool_manager)
+
+
+
+            assert tool_manager.exists("ws_1.read_file")
+
+            assert tool_manager.exists("ws_2.read_file")
+
+
+
+>           mgr.delete_workspace("ws_1")
+
+
+
+tests\test_tool_integration.py:170:
+
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+hermes\workspace\manager.py:27: in delete_workspace
+
+    ws.close()
+
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+
+
+self = <hermes.workspace.workspace.Workspace object at 0x000001B36C059C50>
+
+
+
+    def close(self) -> None:
+
+        if self._closed:
+
+            print("Workspace already closed.")
+
+            return
+
+
+
+        print("\n" + "=" * 80)
+
+        print("WORKSPACE CLOSE")
+
+        print("=" * 80)
+
+        print(f"Workspace : {self.workspace_id}")
+
+
+
+        self._closed = True
+
+
+
+        if self._tool_manager:
+
+            print(f"ToolManager : {id(self._tool_manager)}")
+
+            print(f"Registry    : {id(self._tool_manager.registry)}")
+
+            print()
+
+
+
+            for full_name in sorted(self._registered_tool_names):
+
+                print(f"Removing : {full_name}")
+
+>               self._tool_manager.unregister(full_name)
+
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+E               AttributeError: 'ToolManager' object has no attribute 'unregister'
+
+
+
+hermes\workspace\workspace.py:172: AttributeError
+
+------------------------------------------------ Captured stdout setup ------------------------------------------------
+
+
+
+--------------------------------------------------------------------------------
+
+TOOL MANAGER REGISTER
+
+--------------------------------------------------------------------------------
+
+ToolManager : 1870123074064
+
+Registry    : 1870123078224
+
+Tool        : calculate
+
+
+
+Registry.register()
+
+Registry : 1870123078224
+
+Incoming : calculate
+
+Key used : calculate
+
+Registry keys:
+
+  calculate
+
+Registry now contains:
+
+  calculate
+
+--------------------------------------------------------------------------------
+
+
+
+--------------------------------------------------------------------------------
+
+TOOL MANAGER REGISTER
+
+--------------------------------------------------------------------------------
+
+ToolManager : 1870123074064
+
+Registry    : 1870123078224
+
+Tool        : get_current_time
+
+
+
+Registry.register()
+
+Registry : 1870123078224
+
+Incoming : get_current_time
+
+Key used : get_current_time
+
+Registry keys:
+
+  calculate
+
+  get_current_time
+
+Registry now contains:
+
+  calculate
+
+  get_current_time
+
+--------------------------------------------------------------------------------
+
+------------------------------------------------ Captured stdout call -------------------------------------------------
+
+
+
+================================================================================
+
+WORKSPACE CREATED
+
+================================================================================
+
+Workspace object      : 1870123080784
+
+Workspace ID          : ws_1
+
+MemoryManager         : 1870123076368
+
+Filesystem           : 1870123080208
+
+ArtifactRegistry     : None
+
+Terminal             : None
+
+PythonWorkspace      : None
+
+ToolManager          : 1870123074064
+
+Registry             : 1870123078224
+
+================================================================================
+
+
+
+REGISTERING FILE TOOLS
+
+--------------------------------------------------------------------------------
+
+Namespace : ws_1
+
+
+
+Registering : ws_1.read_file
+
+
+
+--------------------------------------------------------------------------------
+
+TOOL MANAGER REGISTER
+
+--------------------------------------------------------------------------------
+
+ToolManager : 1870123074064
+
+Registry    : 1870123078224
+
+Tool        : ws_1.read_file
+
+
+
+Registry.register()
+
+Registry : 1870123078224
+
+Incoming : ws_1.read_file
+
+Key used : ws_1.read_file
+
+Registry keys:
+
+  calculate
+
+  get_current_time
+
+  ws_1.read_file
+
+Registry now contains:
+
+  calculate
+
+  get_current_time
+
+  ws_1.read_file
+
+--------------------------------------------------------------------------------
+
+SUCCESS
+
+
+
+Registering : ws_1.write_file
+
+
+
+--------------------------------------------------------------------------------
+
+TOOL MANAGER REGISTER
+
+--------------------------------------------------------------------------------
+
+ToolManager : 1870123074064
+
+Registry    : 1870123078224
+
+Tool        : ws_1.write_file
+
+
+
+Registry.register()
+
+Registry : 1870123078224
+
+Incoming : ws_1.write_file
+
+Key used : ws_1.write_file
+
+Registry keys:
+
+  calculate
+
+  get_current_time
+
+  ws_1.read_file
+
+  ws_1.write_file
+
+Registry now contains:
+
+  calculate
+
+  get_current_time
+
+  ws_1.read_file
+
+  ws_1.write_file
+
+--------------------------------------------------------------------------------
+
+SUCCESS
+
+
+
+Registered tools:
+
+  ws_1.read_file
+
+  ws_1.write_file
+
+--------------------------------------------------------------------------------
+
+
+
+================================================================================
+
+WORKSPACE CREATED
+
+================================================================================
+
+Workspace object      : 1870123303248
+
+Workspace ID          : ws_2
+
+MemoryManager         : 1870123303312
+
+Filesystem           : 1870123080976
+
+ArtifactRegistry     : None
+
+Terminal             : None
+
+PythonWorkspace      : None
+
+ToolManager          : 1870123074064
+
+Registry             : 1870123078224
+
+================================================================================
+
+
+
+REGISTERING FILE TOOLS
+
+--------------------------------------------------------------------------------
+
+Namespace : ws_2
+
+
+
+Registering : ws_2.read_file
+
+
+
+--------------------------------------------------------------------------------
+
+TOOL MANAGER REGISTER
+
+--------------------------------------------------------------------------------
+
+ToolManager : 1870123074064
+
+Registry    : 1870123078224
+
+Tool        : ws_2.read_file
+
+
+
+Registry.register()
+
+Registry : 1870123078224
+
+Incoming : ws_2.read_file
+
+Key used : ws_2.read_file
+
+Registry keys:
+
+  calculate
+
+  get_current_time
+
+  ws_1.read_file
+
+  ws_1.write_file
+
+  ws_2.read_file
+
+Registry now contains:
+
+  calculate
+
+  get_current_time
+
+  ws_1.read_file
+
+  ws_1.write_file
+
+  ws_2.read_file
+
+--------------------------------------------------------------------------------
+
+SUCCESS
+
+
+
+Registering : ws_2.write_file
+
+
+
+--------------------------------------------------------------------------------
+
+TOOL MANAGER REGISTER
+
+--------------------------------------------------------------------------------
+
+ToolManager : 1870123074064
+
+Registry    : 1870123078224
+
+Tool        : ws_2.write_file
+
+
+
+Registry.register()
+
+Registry : 1870123078224
+
+Incoming : ws_2.write_file
+
+Key used : ws_2.write_file
+
+Registry keys:
+
+  calculate
+
+  get_current_time
+
+  ws_1.read_file
+
+  ws_1.write_file
+
+  ws_2.read_file
+
+  ws_2.write_file
+
+Registry now contains:
+
+  calculate
+
+  get_current_time
+
+  ws_1.read_file
+
+  ws_1.write_file
+
+  ws_2.read_file
+
+  ws_2.write_file
+
+--------------------------------------------------------------------------------
+
+SUCCESS
+
+
+
+Registered tools:
+
+  ws_2.read_file
+
+  ws_2.write_file
+
+--------------------------------------------------------------------------------
+
+
+
+================================================================================
+
+WORKSPACE CLOSE
+
+================================================================================
+
+Workspace : ws_1
+
+ToolManager : 1870123074064
+
+Registry    : 1870123078224
+
+
+
+Removing : ws_1.read_file
+
+____________________________________ test_execution_after_deleting_other_workspace ____________________________________
+
+
+
+tool_manager = <hermes.tools.manager.ToolManager object at 0x000001B36C134710>
+
+
+
+    def test_execution_after_deleting_other_workspace(tool_manager):
+
+        """Test that deleting one workspace does not break execution of another."""
+
+        mgr = WorkspaceManager()
+
+        with tempfile.TemporaryDirectory() as tmpdir1, tempfile.TemporaryDirectory() as tmpdir2:
+
+            fs1 = LocalFilesystem(tmpdir1)
+
+            fs2 = LocalFilesystem(tmpdir2)
+
+
+
+            ws1 = mgr.create_workspace(workspace_id="ws_del_1", filesystem=fs1, tool_manager=tool_manager)
+
+            ws2 = mgr.create_workspace(workspace_id="ws_del_2", filesystem=fs2, tool_manager=tool_manager)
+
+
+
+            # Write a file to ws2
+
+            write_result = tool_manager.execute_tool(
+
+                f"{ws2.workspace_id}.write_file",
+
+                {"path": "test.txt", "content": "hello"}
+
+            )
+
+            assert write_result.success
+
+
+
+            # Delete ws1
+
+>           mgr.delete_workspace("ws_del_1")
+
+
+
+tests\test_tool_integration.py:223:
+
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+hermes\workspace\manager.py:27: in delete_workspace
+
+    ws.close()
+
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+
+
+self = <hermes.workspace.workspace.Workspace object at 0x000001B36C135D90>
+
+
+
+    def close(self) -> None:
+
+        if self._closed:
+
+            print("Workspace already closed.")
+
+            return
+
+
+
+        print("\n" + "=" * 80)
+
+        print("WORKSPACE CLOSE")
+
+        print("=" * 80)
+
+        print(f"Workspace : {self.workspace_id}")
+
+
+
+        self._closed = True
+
+
+
+        if self._tool_manager:
+
+            print(f"ToolManager : {id(self._tool_manager)}")
+
+            print(f"Registry    : {id(self._tool_manager.registry)}")
+
+            print()
+
+
+
+            for full_name in sorted(self._registered_tool_names):
+
+                print(f"Removing : {full_name}")
+
+>               self._tool_manager.unregister(full_name)
+
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+E               AttributeError: 'ToolManager' object has no attribute 'unregister'
+
+
+
+hermes\workspace\workspace.py:172: AttributeError
+
+------------------------------------------------ Captured stdout setup ------------------------------------------------
+
+
+
+--------------------------------------------------------------------------------
+
+TOOL MANAGER REGISTER
+
+--------------------------------------------------------------------------------
+
+ToolManager : 1870123976464
+
+Registry    : 1870123978768
+
+Tool        : calculate
+
+
+
+Registry.register()
+
+Registry : 1870123978768
+
+Incoming : calculate
+
+Key used : calculate
+
+Registry keys:
+
+  calculate
+
+Registry now contains:
+
+  calculate
+
+--------------------------------------------------------------------------------
+
+
+
+--------------------------------------------------------------------------------
+
+TOOL MANAGER REGISTER
+
+--------------------------------------------------------------------------------
+
+ToolManager : 1870123976464
+
+Registry    : 1870123978768
+
+Tool        : get_current_time
+
+
+
+Registry.register()
+
+Registry : 1870123978768
+
+Incoming : get_current_time
+
+Key used : get_current_time
+
+Registry keys:
+
+  calculate
+
+  get_current_time
+
+Registry now contains:
+
+  calculate
+
+  get_current_time
+
+--------------------------------------------------------------------------------
+
+------------------------------------------------ Captured stdout call -------------------------------------------------
+
+
+
+================================================================================
+
+WORKSPACE CREATED
+
+================================================================================
+
+Workspace object      : 1870123982224
+
+Workspace ID          : ws_del_1
+
+MemoryManager         : 1870123981072
+
+Filesystem           : 1870123980048
+
+ArtifactRegistry     : None
+
+Terminal             : None
+
+PythonWorkspace      : None
+
+ToolManager          : 1870123976464
+
+Registry             : 1870123978768
+
+================================================================================
+
+
+
+REGISTERING FILE TOOLS
+
+--------------------------------------------------------------------------------
+
+Namespace : ws_del_1
+
+
+
+Registering : ws_del_1.read_file
+
+
+
+--------------------------------------------------------------------------------
+
+TOOL MANAGER REGISTER
+
+--------------------------------------------------------------------------------
+
+ToolManager : 1870123976464
+
+Registry    : 1870123978768
+
+Tool        : ws_del_1.read_file
+
+
+
+Registry.register()
+
+Registry : 1870123978768
+
+Incoming : ws_del_1.read_file
+
+Key used : ws_del_1.read_file
+
+Registry keys:
+
+  calculate
+
+  get_current_time
+
+  ws_del_1.read_file
+
+Registry now contains:
+
+  calculate
+
+  get_current_time
+
+  ws_del_1.read_file
+
+--------------------------------------------------------------------------------
+
+SUCCESS
+
+
+
+Registering : ws_del_1.write_file
+
+
+
+--------------------------------------------------------------------------------
+
+TOOL MANAGER REGISTER
+
+--------------------------------------------------------------------------------
+
+ToolManager : 1870123976464
+
+Registry    : 1870123978768
+
+Tool        : ws_del_1.write_file
+
+
+
+Registry.register()
+
+Registry : 1870123978768
+
+Incoming : ws_del_1.write_file
+
+Key used : ws_del_1.write_file
+
+Registry keys:
+
+  calculate
+
+  get_current_time
+
+  ws_del_1.read_file
+
+  ws_del_1.write_file
+
+Registry now contains:
+
+  calculate
+
+  get_current_time
+
+  ws_del_1.read_file
+
+  ws_del_1.write_file
+
+--------------------------------------------------------------------------------
+
+SUCCESS
+
+
+
+Registered tools:
+
+  ws_del_1.read_file
+
+  ws_del_1.write_file
+
+--------------------------------------------------------------------------------
+
+
+
+================================================================================
+
+WORKSPACE CREATED
+
+================================================================================
+
+Workspace object      : 1870123977104
+
+Workspace ID          : ws_del_2
+
+MemoryManager         : 1870123983312
+
+Filesystem           : 1870123981328
+
+ArtifactRegistry     : None
+
+Terminal             : None
+
+PythonWorkspace      : None
+
+ToolManager          : 1870123976464
+
+Registry             : 1870123978768
+
+================================================================================
+
+
+
+REGISTERING FILE TOOLS
+
+--------------------------------------------------------------------------------
+
+Namespace : ws_del_2
+
+
+
+Registering : ws_del_2.read_file
+
+
+
+--------------------------------------------------------------------------------
+
+TOOL MANAGER REGISTER
+
+--------------------------------------------------------------------------------
+
+ToolManager : 1870123976464
+
+Registry    : 1870123978768
+
+Tool        : ws_del_2.read_file
+
+
+
+Registry.register()
+
+Registry : 1870123978768
+
+Incoming : ws_del_2.read_file
+
+Key used : ws_del_2.read_file
+
+Registry keys:
+
+  calculate
+
+  get_current_time
+
+  ws_del_1.read_file
+
+  ws_del_1.write_file
+
+  ws_del_2.read_file
+
+Registry now contains:
+
+  calculate
+
+  get_current_time
+
+  ws_del_1.read_file
+
+  ws_del_1.write_file
+
+  ws_del_2.read_file
+
+--------------------------------------------------------------------------------
+
+SUCCESS
+
+
+
+Registering : ws_del_2.write_file
+
+
+
+--------------------------------------------------------------------------------
+
+TOOL MANAGER REGISTER
+
+--------------------------------------------------------------------------------
+
+ToolManager : 1870123976464
+
+Registry    : 1870123978768
+
+Tool        : ws_del_2.write_file
+
+
+
+Registry.register()
+
+Registry : 1870123978768
+
+Incoming : ws_del_2.write_file
+
+Key used : ws_del_2.write_file
+
+Registry keys:
+
+  calculate
+
+  get_current_time
+
+  ws_del_1.read_file
+
+  ws_del_1.write_file
+
+  ws_del_2.read_file
+
+  ws_del_2.write_file
+
+Registry now contains:
+
+  calculate
+
+  get_current_time
+
+  ws_del_1.read_file
+
+  ws_del_1.write_file
+
+  ws_del_2.read_file
+
+  ws_del_2.write_file
+
+--------------------------------------------------------------------------------
+
+SUCCESS
+
+
+
+Registered tools:
+
+  ws_del_2.read_file
+
+  ws_del_2.write_file
+
+--------------------------------------------------------------------------------
+
+
+
+LOOKUP TOOL
+
+--------------------------------------------------------------------------------
+
+ToolManager : 1870123976464
+
+Registry    : 1870123978768
+
+Searching for:
+
+ws_del_2.write_file
+
+
+
+Registry.get()
+
+Registry : 1870123978768
+
+Input    : ws_del_2.write_file
+
+Canonical: ws_del_2.write_file
+
+FOUND
+
+FOUND
+
+ws_del_2.write_file
+
+
+
+================================================================================
+
+WORKSPACE CLOSE
+
+================================================================================
+
+Workspace : ws_del_1
+
+ToolManager : 1870123976464
+
+Registry    : 1870123978768
+
+
+
+Removing : ws_del_1.read_file
+
+________________________________________ test_workspace_tool_manager_injection ________________________________________
+
+
+
+    def test_workspace_tool_manager_injection():
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+
+            tm = ToolManager(ToolRegistry())
+
+            fs = LocalFilesystem(tmpdir)
+
+            ws = Workspace(filesystem=fs, tool_manager=tm)
+
+            # FIX: workspace_id already starts with "ws_", no need to add it again
+
+>           assert tm.exists(f"{ws.workspace_id}.read_file")
+
+E           AssertionError: assert False
+
+E            +  where False = exists('ws_b3a4c409a7154085977e30aecedf29ab.read_file')
+
+E            +    where exists = <hermes.tools.manager.ToolManager object at 0x000001B36C0257D0>.exists
+
+
+
+tests\test_workspace.py:80: AssertionError
+
+------------------------------------------------ Captured stdout call -------------------------------------------------
+
+
+
+================================================================================
+
+WORKSPACE CREATED
+
+================================================================================
+
+Workspace object      : 1870122869200
+
+Workspace ID          : ws_b3a4c409a7154085977e30aecedf29ab
+
+MemoryManager         : 1870122864208
+
+Filesystem           : 1870122864464
+
+ArtifactRegistry     : None
+
+Terminal             : None
+
+PythonWorkspace      : None
+
+ToolManager          : None
+
+================================================================================
+
+================================================== warnings summary ===================================================
+
+Hermes-GENESIS/tests/test_chat_pipeline.py::test_chat_send_falls_back_to_manager_when_no_pipeline
+
+  C:\imp folders\ongoing presets\HERMES GPT\Hermes2-BASED\Hermes-GENESIS\tests\test_chat_pipeline.py:93: DeprecationWarning: Passing 'manager' to Chat is deprecated; use 'pipeline' instead.
+
+    chat = Chat(manager=mock_manager, provider="test-provider", model="test-model")
+
+
+
+Hermes-GENESIS/tests/test_chat_pipeline.py::test_chat_manager_property_returns_manager
+
+  C:\imp folders\ongoing presets\HERMES GPT\Hermes2-BASED\Hermes-GENESIS\tests\test_chat_pipeline.py:134: DeprecationWarning: Passing 'manager' to Chat is deprecated; use 'pipeline' instead.
+
+    chat = Chat(manager=mock_manager)
+
+
+
+Hermes-GENESIS/tests/test_streaming.py::test_stream_falls_back_to_manager_when_no_pipeline
+
+  C:\imp folders\ongoing presets\HERMES GPT\Hermes2-BASED\Hermes-GENESIS\tests\test_streaming.py:123: DeprecationWarning: Passing 'manager' to Chat is deprecated; use 'pipeline' instead.
+
+    chat = Chat(manager=manager, provider="test-provider", model="test-model")
+
+
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+
+=============================================== short test summary info ===============================================
+
+FAILED tests\test_tool_integration.py::test_workspace_deletion_cleans_tools - AttributeError: 'ToolManager' object has no attribute 'unregister'
+
+FAILED tests\test_tool_integration.py::test_workspace_close_is_idempotent - AttributeError: 'ToolManager' object has no attribute 'unregister'
+
+FAILED tests\test_tool_integration.py::test_deleting_multiple_workspaces - AttributeError: 'ToolManager' object has no attribute 'unregister'
+
+FAILED tests\test_tool_integration.py::test_execution_after_deleting_other_workspace - AttributeError: 'ToolManager' object has no attribute 'unregister'
+
+FAILED tests\test_workspace.py::test_workspace_tool_manager_injection - AssertionError: assert False
+
+===================================== 5 failed, 416 passed, 3 warnings in 18.86s ======================================
