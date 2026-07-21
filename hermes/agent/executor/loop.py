@@ -1,235 +1,213 @@
 """
 ===============================================================================
-Agent Executor Loop
+Agent ReAct Loop
 ===============================================================================
 
 Dependencies:
+    - time
+    - typing
     - hermes.ai.conversation
-    - hermes.ai.pipeline
-    - hermes.ai.request
     - hermes.ai.response
     - hermes.ai.tool
-    - hermes.agent.executor.builder
-    - hermes.agent.executor.context_factory
-    - hermes.agent.executor.conversation_manager
-    - hermes.agent.executor.state
+    - hermes.agent.executor.protocols
+    - hermes.agent.executor.result
+    - hermes.agent.executor.conversation_state
     - hermes.agent.executor.tool_runner
-    - hermes.agent.planner.decision
-    - hermes.agent.planner.hasher
-    - hermes.agent.planner.planner
-    - hermes.agent.planner.reasoning_planner
-    - hermes.workspace.context
+    - hermes.agent.executor.context_factory
+    - hermes.agent.executor.request_builder
+    - hermes.agent.executor.trace
+    - hermes.agent.executor.serializer
 
 Consumes:
-    - AIPipeline
-    - ToolManager
-    - AIConversation
+    - PipelineProtocol
+    - ToolRunner
+    - ConversationState
     - AgentContextFactory
-    - Planner
-    - ExecutionContext
+    - RequestBuilder
+    - AgentTrace
 
 Produces:
-    - AIResponse (Final)
+    - AgentResult
 
 Public API:
-    - AgentExecutor.run()
+    - ReActLoop
 ===============================================================================
 """
 
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, List, Optional
+from typing import Dict, Optional
 
-from hermes.ai.conversation import AIConversation
-from hermes.ai.pipeline import AIPipeline
-from hermes.ai.request import AIRequest
-from hermes.ai.response import AIResponse, ResponseFactory
-from hermes.ai.tool import ToolManager, ToolResult, ToolStatus
-from hermes.agent.executor.builder import RequestBuilder
-from hermes.agent.executor.context_factory import AgentContextFactory
-from hermes.agent.executor.conversation_manager import ConversationManager
-from hermes.agent.executor.state import ExecutionState, ExecutionStatus, ToolFailureRecord
+from hermes.ai.response import AIResponse, ToolCall
+from hermes.ai.tool import ToolResult
+from hermes.agent.executor.protocols import PipelineProtocol
+from hermes.agent.executor.result import AgentResult
+from hermes.agent.executor.conversation_state import ConversationState
 from hermes.agent.executor.tool_runner import ToolRunner
-from hermes.agent.planner.decision import Decision
-from hermes.agent.planner.hasher import ToolCallHasher
-from hermes.agent.planner.planner import DefaultPlanner, Planner
-from hermes.agent.planner.reasoning_planner import ReasoningPlanner
-# FIX: Import from the new workspace package to avoid runtime collision
-from hermes.workspace.context import ExecutionContext
+from hermes.agent.executor.context_factory import AgentContextFactory
+from hermes.agent.executor.request_builder import RequestBuilder
+from hermes.agent.executor.trace import AgentTrace, TraceEventType
+from hermes.agent.executor.serializer import ToolResultSerializer
+from hermes.workspace.workspace import Workspace
 
 
-class AgentExecutor:
+class ReActLoop:
+    """
+    The core ReAct (Reason + Act) orchestration engine.
+    """
+
     def __init__(
         self,
-        pipeline: AIPipeline,
-        tool_manager: ToolManager,
-        provider: str,
-        model: str = "",
-        max_iterations: int = 10,
-        use_cache: bool = False,
-        context_factory: AgentContextFactory | None = None,
-        planner: Planner | None = None,
+        pipeline: PipelineProtocol,
+        tool_runner: ToolRunner,
+        conv_state: ConversationState,
+        context_factory: AgentContextFactory,
+        request_builder: RequestBuilder,
+        max_iterations: int,
+        trace: AgentTrace,
+        workspace: Optional[Workspace] = None,
     ) -> None:
         self._pipeline = pipeline
-        self._tool_manager = tool_manager
-        self._provider = provider
-        self._model = model
+        self._tool_runner = tool_runner
+        self._conv_state = conv_state
+        self._context_factory = context_factory
+        self._request_builder = request_builder
         self._max_iterations = max_iterations
-        self._use_cache = use_cache
-        self._context_factory = context_factory or AgentContextFactory()
-        
-        if planner is None:
-            self._planner = ReasoningPlanner(registry=self._tool_manager.registry)
-        else:
-            self._planner = planner
+        self._trace = trace
+        self._workspace = workspace
 
-    def run(
-        self,
-        prompt: str,
-        conversation: AIConversation,
-        system_prompt: str | None = None,
-        execution_context: ExecutionContext | None = None
-    ) -> AIResponse:
-        """
-        Run the agent loop for a given prompt.
-        Optionally accepts an ExecutionContext to bind this run to a Workspace.
-        """
-        exec_ctx = execution_context or ExecutionContext.create(workspace_id="ephemeral")
-        
-        state = ExecutionState(
-            conversation=conversation,
-            execution_id=exec_ctx.execution_id,
-            metadata={"workspace_id": exec_ctx.workspace_id, **exec_ctx.metadata}
-        )
-        
-        conv_manager = ConversationManager(conversation)
-        tool_runner = ToolRunner(self._tool_manager)
+    def run(self) -> AgentResult:
+        """Execute the ReAct loop."""
+        start_time = time.time()
 
-        if system_prompt:
-            conv_manager.append_system(system_prompt)
+        for iteration in range(1, self._max_iterations + 1):
+            self._trace.add_event(iteration, TraceEventType.ITERATION_START)
 
-        conv_manager.append_user(prompt)
-        
-        state.status = ExecutionStatus.RUNNING
-        state.updated_at = time.time()
+            # 1. Build request from conversation history
+            self._trace.add_event(iteration, TraceEventType.LLM_START)
+            request = self._request_builder.build(self._conv_state.conversation)
 
-        transient_messages: Optional[List[Dict[str, Any]]] = None
-
-        for _ in range(self._max_iterations):
-            state.iteration += 1
-            state.updated_at = time.time()
-            self._before_llm()
-
-            message_dicts = RequestBuilder.build(conversation, transient_messages=transient_messages)
-            transient_messages = None
-
-            request = AIRequest(
-                prompt="",
-                input=None,
-                provider=self._provider,
-                model=self._model,
-                task="chat",
-                options={"messages": message_dicts},
-                metadata={"execution_id": exec_ctx.execution_id},
-            )
-
+            # 2. Execute via pipeline
             response = self._pipeline.execute(
-                provider=self._provider,
+                provider=self._request_builder.provider,
                 request=request,
                 context=None,
-                use_cache=self._use_cache,
+                use_cache=False,
+            )
+            self._trace.add_event(
+                iteration, 
+                TraceEventType.LLM_FINISH, 
+                {"success": response.success}
+            )
+
+            # Track token usage
+            if response.usage:
+                self._trace.add_token_usage(
+                    response.usage.prompt_tokens, 
+                    response.usage.completion_tokens
+                )
+
+            # 3. Check if pipeline failed
+            if not response.success:
+                self._trace.add_event(iteration, TraceEventType.FAILED)
+                self._trace.add_event(iteration, TraceEventType.ITERATION_FINISH)
+                self._trace.finalize()
+                return AgentResult(
+                    response=response,
+                    iterations=iteration,
+                    duration=time.time() - start_time,
+                    token_usage={
+                        "prompt_tokens": self._trace.metrics.total_prompt_tokens, 
+                        "completion_tokens": self._trace.metrics.total_completion_tokens
+                    },
+                    stop_reason="pipeline_error",
+                    trace=self._trace
+                )
+
+            # 4. Check if we are done (no tool calls)
+            if not response.tool_calls:
+                # Append final assistant message
+                self._conv_state.append_assistant_text(response.text() or "")
+                self._trace.add_event(
+                    iteration, 
+                    TraceEventType.COMPLETED, 
+                    {"text_length": len(response.text() or "")}
+                )
+                self._trace.add_event(iteration, TraceEventType.ITERATION_FINISH)
+                self._trace.finalize()
+                return AgentResult(
+                    response=response,
+                    iterations=iteration,
+                    duration=time.time() - start_time,
+                    token_usage={
+                        "prompt_tokens": self._trace.metrics.total_prompt_tokens, 
+                        "completion_tokens": self._trace.metrics.total_completion_tokens
+                    },
+                    stop_reason="completed",
+                    trace=self._trace
+                )
+
+            # 5. We have tool calls. Append assistant tool call message to history
+            self._conv_state.append_assistant_tool_calls(response)
+            self._trace.add_event(
+                iteration, 
+                TraceEventType.TOOL_START, 
+                {"tool_calls": len(response.tool_calls)}
+            )
+
+            # 6. Build context and execute tools
+            tool_context = self._context_factory.build(
+                conversation=self._conv_state.conversation,
+                workspace=self._workspace
             )
             
-            state.current_response = response
-            state.response_history.append(response)
+            # ToolRunner returns a dict mapping call_id -> ToolResult
+            results_map: Dict[str, ToolResult] = self._tool_runner.execute(response.tool_calls, tool_context)
 
-            self._after_llm(response)
-
-            decision = self._planner.decide(response, state)
-
-            if decision.decision == Decision.FINISH:
-                conv_manager.append_assistant(response.text() or "")
-                state.status = ExecutionStatus.FINISHED
-                state.updated_at = time.time()
-                return response
+            # 7. Serialize results and append to conversation
+            tool_results_data = []
+            for tc in response.tool_calls:
+                result = results_map.get(tc.id)
+                output_str = ToolResultSerializer.serialize(tc, result)
+                tool_name = tc.function.name if tc.function else "unknown"
                 
-            elif decision.decision == Decision.ABORT:
-                state.status = ExecutionStatus.FAILED
-                state.updated_at = time.time()
-                return ResponseFactory.error(
-                    message=f"Execution aborted: {decision.reason}",
-                    provider=self._provider,
-                    model=self._model
+                self._conv_state.append_tool_message(
+                    tool_call_id=tc.id,
+                    tool_name=tool_name,
+                    output=output_str
                 )
-                
-            elif decision.decision == Decision.CALL_TOOLS:
-                conv_manager.append_tool_calls(response)
-                state.status = ExecutionStatus.WAITING_FOR_TOOLS
-                state.updated_at = time.time()
-
-                self._before_tools()
-
-                tool_context = self._context_factory.build(conversation)
-                results = tool_runner.execute(response.tool_calls, context=tool_context)
-                state.tool_results.extend(results)
-
-                for i, tc in enumerate(response.tool_calls):
-                    result = results[i]
-                    if result.status == ToolStatus.FAILED:
-                        fingerprint = ToolCallHasher.fingerprint(tc)
-                        state.failure_history.append(ToolFailureRecord(
-                            fingerprint=fingerprint,
-                            tool_name=tc.function.name if tc.function else "unknown",
-                            error=result.error or "Unknown error",
-                            iteration=state.iteration
-                        ))
-
-                self._after_tools(results)
-
-                for i, tc in enumerate(response.tool_calls):
-                    result = results[i]
-                    conv_manager.append_tool_result(tc, result)
-                
-                state.status = ExecutionStatus.RUNNING
-                state.updated_at = time.time()
-                continue
+                tool_results_data.append({
+                    "call_id": tc.id, 
+                    "tool_name": tool_name, 
+                    "success": result.success if result else False
+                })
             
-            elif decision.decision == Decision.RETRY:
-                state.retry_count += 1
-                transient_messages = [
-                    {"role": "assistant", "content": response.text() or ""},
-                    {"role": "system", "content": decision.feedback or "Please try again or use a tool."}
-                ]
-                state.status = ExecutionStatus.RUNNING
-                state.updated_at = time.time()
-                continue
-            
-            else:
-                state.status = ExecutionStatus.FAILED
-                state.updated_at = time.time()
-                return ResponseFactory.error(
-                    message=f"Planner returned unhandled decision: {decision.decision}",
-                    provider=self._provider,
-                    model=self._model,
-                )
+            self._trace.add_event(
+                iteration, 
+                TraceEventType.TOOL_FINISH, 
+                {"results": tool_results_data}
+            )
+            self._trace.add_event(iteration, TraceEventType.ITERATION_FINISH)
 
-        state.status = ExecutionStatus.MAX_ITERATIONS
-        state.updated_at = time.time()
-        return ResponseFactory.error(
+        # Loop exhausted
+        final_response = AIResponse(
+            success=False,
             message=f"Agent reached maximum iterations ({self._max_iterations}) without a final response.",
-            provider=self._provider,
-            model=self._model,
+            provider=self._request_builder.provider,
+            model=self._request_builder.model,
         )
-
-    def _before_llm(self) -> None:
-        pass
-
-    def _after_llm(self, response: AIResponse) -> None:
-        pass
-
-    def _before_tools(self) -> None:
-        pass
-
-    def _after_tools(self, results: list[ToolResult]) -> None:
-        pass
+        self._trace.add_event(self._max_iterations, TraceEventType.MAX_ITERATIONS_EXCEEDED)
+        self._trace.add_event(self._max_iterations, TraceEventType.ITERATION_FINISH)
+        self._trace.finalize()
+        return AgentResult(
+            response=final_response,
+            iterations=self._max_iterations,
+            duration=time.time() - start_time,
+            token_usage={
+                "prompt_tokens": self._trace.metrics.total_prompt_tokens, 
+                "completion_tokens": self._trace.metrics.total_completion_tokens
+            },
+            stop_reason="max_iterations",
+            trace=self._trace
+        )

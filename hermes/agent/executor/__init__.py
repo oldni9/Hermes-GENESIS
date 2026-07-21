@@ -1,48 +1,57 @@
-
 """
 ===============================================================================
 Agent Executor Package
 ===============================================================================
 
 Dependencies:
-    - hermes.agent.executor.builder
-    - hermes.agent.executor.context_factory
-    - hermes.agent.executor.conversation_manager
-    - hermes.agent.executor.state
-    - hermes.agent.executor.tool_runner
-    - hermes.agent.executor.loop
+    - hermes.agent.executor.executor
+    - hermes.agent.executor.protocols
+    - hermes.agent.executor.result
+    - hermes.agent.executor.trace
 
 Consumes:
     - None directly (re-exports)
 
 Produces:
     - AgentExecutor
-    - RequestBuilder
-    - AgentContextFactory
-    - ExecutionState
-    - ExecutionStatus
-    - ConversationManager
-    - ToolRunner
+    - AgentResult
+    - PipelineProtocol
+    - AgentTrace
+    - TraceEvent
 
 Public API:
     - AgentExecutor
-    - RequestBuilder
+    - AgentTrace
+
+Future Extensibility:
+    The executor package intentionally isolates planning from execution. 
+    Future planners (Tree-of-Thought, Reflection, Multi-Agent, Self-Critique, 
+    Planner/Executor separation) can replace `ReActLoop` without changing 
+    `AgentExecutor`, `ToolRunner`, or `ConversationState`.
 ===============================================================================
 """
 
-from hermes.agent.executor.builder import RequestBuilder
-from hermes.agent.executor.context_factory import AgentContextFactory
-from hermes.agent.executor.conversation_manager import ConversationManager
-from hermes.agent.executor.state import ExecutionState, ExecutionStatus
-from hermes.agent.executor.tool_runner import ToolRunner
-from hermes.agent.executor.loop import AgentExecutor
+from hermes.agent.executor.executor import AgentExecutor
+from hermes.agent.executor.protocols import PipelineProtocol
+from hermes.agent.executor.result import AgentResult
+from hermes.agent.executor.trace import AgentTrace, TraceEvent, TraceEventType
+from hermes.agent.executor.errors import MaxIterationsExceeded, PipelineExecutionError
+from hermes.agent.executor.planners.base import Planner, PlannerState, PlannerConfig
+from hermes.agent.executor.planners.react import ReActPlanner
+from hermes.agent.executor.planners.reflection import ReflectionPlanner
 
 __all__ = [
     "AgentExecutor",
-    "RequestBuilder",
-    "AgentContextFactory",
-    "ExecutionState",
-    "ExecutionStatus",
-    "ConversationManager",
-    "ToolRunner",
+    "AgentResult",
+    "PipelineProtocol",
+    "AgentTrace",
+    "TraceEvent",
+    "TraceEventType",
+    "MaxIterationsExceeded",
+    "PipelineExecutionError",
+    "Planner",
+    "PlannerState",
+    "PlannerConfig",
+    "ReActPlanner",
+    "ReflectionPlanner",
 ]

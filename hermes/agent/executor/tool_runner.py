@@ -1,38 +1,41 @@
 """
 ===============================================================================
-Tool Runner
+Agent Tool Runner
 ===============================================================================
 
 Dependencies:
+    - typing
     - hermes.ai.adapters.provider_tool_adapter
-    - hermes.ai.tool
     - hermes.ai.response
+    - hermes.ai.tool
 
 Consumes:
     - ToolManager
     - list[ToolCall] (from AIResponse)
-    - ToolContext (built by AgentContextFactory)
+    - ToolContext
 
 Produces:
-    - list[ToolResult]
+    - Dict[str, ToolResult] (call_id -> ToolResult)
 
 Public API:
-    - ToolRunner.execute()
+    - ToolRunner
 ===============================================================================
 """
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Dict, List
 
 from hermes.ai.adapters.provider_tool_adapter import ProviderToolAdapter
 from hermes.ai.response import ToolCall
-from hermes.ai.tool import ToolManager, ToolResult, ToolStatus, ToolContext
+from hermes.ai.tool import ToolContext, ToolManager, ToolResult
 
 
 class ToolRunner:
     """
-    Thin adapter that handles tool execution and result normalization.
+    Execution adapter for tools.
+    Converts provider tool calls, executes them, and maps structured results by call_id.
+    Does NOT serialize results to strings; preserves structured ToolResult objects.
     """
 
     def __init__(self, tool_manager: ToolManager) -> None:
@@ -41,10 +44,13 @@ class ToolRunner:
     def execute(
         self, 
         provider_tool_calls: List[ToolCall], 
-        context: Optional[ToolContext] = None
-    ) -> List[ToolResult]:
+        context: ToolContext
+    ) -> Dict[str, ToolResult]:
         """
-        Execute a batch of provider tool calls and return results mapped by call_id.
+        Execute a batch of provider tool calls.
+        
+        Returns:
+            A dictionary mapping `call_id` to the structured `ToolResult` object.
         """
         converted_calls, conversion_errors = ProviderToolAdapter.convert_provider_tool_calls(
             provider_tool_calls
@@ -55,20 +61,18 @@ class ToolRunner:
         else:
             results = []
 
+        # Map results back to original ToolCall order by call_id
         all_results = {r.call_id: r for r in results}
         for err in conversion_errors:
             all_results[err.call_id] = err
 
-        ordered_results: List[ToolResult] = []
+        # Ensure every requested call_id has an entry, even if missing
         for tc in provider_tool_calls:
-            result = all_results.get(tc.id)
-            if result is None:
-                ordered_results.append(ToolResult(
+            if tc.id not in all_results:
+                all_results[tc.id] = ToolResult(
                     call_id=tc.id,
-                    status=ToolStatus.FAILED,
-                    error="Error: Tool execution result missing.",
-                ))
-            else:
-                ordered_results.append(result)
+                    status="failed",
+                    error="Error: Tool execution result missing."
+                )
 
-        return ordered_results
+        return all_results
