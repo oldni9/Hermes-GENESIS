@@ -3,11 +3,10 @@
 Debate Planner
 ===============================================================================
 
-Phase 1 Implementation:
-- Runs K debaters sequentially via ExecutionEngine.execute_ephemeral().
-- Each debater receives the objective but applies a different persona system prompt.
-- A Judge synthesizes the debater responses into a final answer.
-- Uses the ExecutionEngine exclusively for LLM calls.
+Phase 2 Implementation (Sprint 12):
+- Runs K debaters concurrently via engine.execute_parallel().
+- Tolerates partial failures (only fails if 0 debaters succeed).
+- Correctly maps successful responses back to their personas for the Judge.
 ===============================================================================
 """
 
@@ -18,6 +17,7 @@ from typing import Any, List, Tuple
 
 from hermes.ai.response import AIResponse
 from hermes.core.errors import HermesRuntimeError, ExecutionCancelled, DeadlineExceeded, BudgetExceeded
+from hermes.runtime.parallel import ParallelJob, ParallelResult
 from hermes.agent.executor.engine import ExecutionEngine
 from hermes.agent.executor.planners.base import Planner, PlannerState, DebateConfig, DebaterPersona
 from hermes.agent.executor.result import AgentResult, StopReason
@@ -26,8 +26,8 @@ from hermes.agent.executor.trace import TraceEventType
 
 class DebatePlanner(Planner):
     """
-    A planner that uses multiple personas to debate a prompt, and a judge 
-    to synthesize the final answer.
+    A planner that uses multiple personas to debate a prompt in parallel, 
+    and a judge to synthesize the final answer.
     """
     
     def __init__(self, **kwargs: Any) -> None:
@@ -49,19 +49,19 @@ class DebatePlanner(Planner):
             if not initial_prompt:
                 return self._handle_failure(engine, state, 1, start_time, "No objective found for debate.", StopReason.PIPELINE_ERROR)
 
-            # 1. Execute Debaters
+            # 1. Execute Debaters in Parallel via Engine
             debate_responses = self._execute_debaters(engine, state, config, initial_prompt)
-            if isinstance(debate_responses, AIResponse): # Failure occurred
+            if isinstance(debate_responses, AIResponse): # Hard failure occurred
                 return self._handle_failure(engine, state, 1, start_time, debate_responses.message, StopReason.PIPELINE_ERROR)
 
             # 2. Run Judge to synthesize final answer
             state.trace.add_event(1, TraceEventType.JUDGE_STARTED)
             
             debates_str = "\n\n".join([
-                f"=== Debater {i+1} ({config.personas[i].name}) ===\n{resp}" 
-                for i, resp in enumerate(debate_responses)
+                f"=== Debater ({name}) ===\n{val}" 
+                for name, val in debate_responses
             ])
-            judge_prompt = config.judge_prompt.format(n=config.debaters, debates=debates_str)
+            judge_prompt = config.judge_prompt.format(n=len(debate_responses), debates=debates_str)
             judge_response = engine.execute_ephemeral(state.trace, 1, config, judge_prompt)
             
             if not judge_response.success:
@@ -108,22 +108,48 @@ class DebatePlanner(Planner):
                 trace=state.trace
             )
 
-    def _execute_debaters(self, engine: ExecutionEngine, state: PlannerState, config: DebateConfig, initial_prompt: str) -> List[str] | AIResponse:
-        """Executes debaters sequentially. Returns list of responses or failed AIResponse."""
-        responses = []
+    def _execute_debaters(self, engine: ExecutionEngine, state: PlannerState, config: DebateConfig, initial_prompt: str) -> List[Tuple[str, str]] | AIResponse:
+        """Executes debaters concurrently using engine.execute_parallel()."""
+        jobs: List[ParallelJob] = []
+        
         for i in range(config.debaters):
             persona = config.personas[i]
-            state.trace.add_event(1, TraceEventType.DEBATER_STARTED, {"persona": persona.name})
-            
             debater_prompt = config.debater_prompt.format(system_prompt=persona.system_prompt, prompt=initial_prompt)
-            response = engine.execute_ephemeral(state.trace, 1, config, debater_prompt)
             
-            if not response.success:
-                return response
+            def make_task(p: DebaterPersona, pr: str):
+                def task() -> str:
+                    state.trace.add_event(1, TraceEventType.DEBATER_STARTED, {"persona": p.name})
+                    state.trace.add_event(1, TraceEventType.PARALLEL_JOB_STARTED, {"id": p.name})
+                    
+                    response = engine.execute_ephemeral(state.trace, 1, config, pr)
+                    
+                    if not response.success:
+                        raise Exception(response.message)
+                        
+                    state.trace.add_event(1, TraceEventType.DEBATER_FINISHED, {"persona": p.name})
+                    state.trace.add_event(1, TraceEventType.DEBATER_RESPONSE, {"persona": p.name, "length": len(response.text())})
+                    state.trace.add_event(1, TraceEventType.PARALLEL_JOB_FINISHED, {"id": p.name, "duration": 0.0})
+                    return response.text()
+                return task
+
+            jobs.append(ParallelJob(id=persona.name, fn=make_task(persona, debater_prompt)))
+            
+        # Delegate parallel execution to the engine
+        results = engine.execute_parallel(state.trace, 1, config, jobs)
+        
+        # Process results, tolerating partial failures and mapping back to personas
+        responses: List[Tuple[str, str]] = []
+        for i, res in enumerate(results):
+            if not res.success:
+                state.trace.add_event(1, TraceEventType.PARALLEL_JOB_FAILED, {"id": res.id, "error": str(res.exception)})
+            else:
+                # Use the persona name from config to ensure correct mapping
+                responses.append((config.personas[i].name, res.value))
                 
-            responses.append(response.text())
-            state.trace.add_event(1, TraceEventType.DEBATER_FINISHED, {"persona": persona.name})
-            state.trace.add_event(1, TraceEventType.DEBATER_RESPONSE, {"persona": persona.name, "length": len(response.text())})
+        # Only fail if ALL debaters fail
+        if not responses:
+            return AIResponse(success=False, message="All debaters failed in parallel execution.", provider=engine.provider, model=engine.model)
+            
         return responses
 
     def _handle_failure(self, engine: ExecutionEngine, state: PlannerState, iteration: int, start_time: float, message: str, stop_reason: StopReason) -> AgentResult:

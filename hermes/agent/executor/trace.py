@@ -2,10 +2,18 @@
 ===============================================================================
 Agent Trace & Observability
 ===============================================================================
+
+Sprint 12 Update:
+Added fine-grained locking (_event_lock, _metric_lock) to AgentTrace 
+to ensure thread-safe updates during parallel execution.
+Added sequence and thread metadata to TraceEvent for deterministic UI replay.
+Added PARALLEL_* trace events for parallel execution telemetry.
+===============================================================================
 """
 
 from __future__ import annotations
 
+import threading
 import time
 from dataclasses import dataclass, field
 from enum import Enum
@@ -57,6 +65,13 @@ class TraceEventType(str, Enum):
     JUDGE_STARTED = "judge_started"
     JUDGE_FINISHED = "judge_finished"
     DEBATE_COMPLETED = "debate_completed"
+    
+    # Parallel Execution Events (Sprint 12)
+    PARALLEL_STARTED = "parallel_started"
+    PARALLEL_JOB_STARTED = "parallel_job_started"
+    PARALLEL_JOB_FINISHED = "parallel_job_finished"
+    PARALLEL_JOB_FAILED = "parallel_job_failed"
+    PARALLEL_COMPLETED = "parallel_completed"
 
 
 @dataclass(slots=True)
@@ -66,6 +81,8 @@ class TraceEvent:
     iteration: int
     event_type: TraceEventType
     payload: Dict[str, Any] = field(default_factory=dict)
+    sequence: int = 0
+    thread: int = 0
     
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -73,6 +90,8 @@ class TraceEvent:
             "iteration": self.iteration,
             "event_type": self.event_type.value,
             "payload": self.payload,
+            "sequence": self.sequence,
+            "thread": self.thread,
         }
 
 
@@ -94,17 +113,23 @@ class TraceMetrics:
 
 
 class AgentTrace:
-    """Collects and stores trace events during an agent run."""
+    """Collects and stores trace events during an agent run. Thread-safe."""
 
     def __init__(self) -> None:
         self._events: List[TraceEvent] = []
         self._start_time: float = time.time()
         self._end_time: Optional[float] = None
         self._metrics: TraceMetrics = TraceMetrics()
+        self._seq_counter: int = 0
+        
+        # Fine-grained locks for thread safety
+        self._event_lock = threading.Lock()
+        self._metric_lock = threading.Lock()
 
     @property
     def events(self) -> List[TraceEvent]:
-        return list(self._events)
+        with self._event_lock:
+            return list(self._events)
 
     @property
     def metrics(self) -> TraceMetrics:
@@ -117,25 +142,35 @@ class AgentTrace:
         return self._end_time - self._start_time
 
     def add_event(self, iteration: int, event_type: TraceEventType, payload: Optional[Dict[str, Any]] = None) -> None:
-        self._events.append(TraceEvent(
-            timestamp=time.time(),
-            iteration=iteration,
-            event_type=event_type,
-            payload=payload or {}
-        ))
+        with self._event_lock:
+            self._seq_counter += 1
+            self._events.append(TraceEvent(
+                timestamp=time.time(),
+                iteration=iteration,
+                event_type=event_type,
+                payload=payload or {},
+                sequence=self._seq_counter,
+                thread=threading.get_ident()
+            ))
 
     def add_token_usage(self, prompt_tokens: int, completion_tokens: int) -> None:
-        self._metrics.total_prompt_tokens += prompt_tokens
-        self._metrics.total_completion_tokens += completion_tokens
+        with self._metric_lock:
+            self._metrics.total_prompt_tokens += prompt_tokens
+            self._metrics.total_completion_tokens += completion_tokens
 
     def finalize(self) -> None:
         self._end_time = time.time()
-        self._metrics.duration = self.duration
+        with self._metric_lock:
+            self._metrics.duration = self.duration
 
     def to_dict(self) -> Dict[str, Any]:
+        with self._event_lock:
+            events = [e.to_dict() for e in self._events]
+        with self._metric_lock:
+            metrics = self._metrics.to_dict()
         return {
-            "metrics": self._metrics.to_dict(),
-            "events": [e.to_dict() for e in self._events],
+            "metrics": metrics,
+            "events": events,
         }
 
 # VERIFICATION

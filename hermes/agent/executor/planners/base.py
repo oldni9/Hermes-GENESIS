@@ -3,8 +3,8 @@
 Planner Base Architecture
 ===============================================================================
 
-Separates planning strategy (Planner) from execution mechanics (ExecutionEngine).
-Planners own the orchestration loop and instruct the engine to execute turns.
+Sprint 12 Update:
+Removed parallel_workers from DebateConfig (moved to RuntimePolicy).
 ===============================================================================
 """
 
@@ -29,7 +29,7 @@ class PlannerState:
     iteration: int = 0
     reflection_count: int = 0
     runtime_context: Optional[RuntimeContext] = None
-    objective: str = ""  # Sprint 11: Decouples planners from conversation history
+    objective: str = ""
 
 
 @dataclass

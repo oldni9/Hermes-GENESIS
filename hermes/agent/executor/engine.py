@@ -3,18 +3,9 @@
 Execution Engine
 ===============================================================================
 
-Handles the mechanics of running LLM calls and tool execution.
-It loops internally until the LLM stops requesting tools.
-It is completely stateless and instructed by the Planner.
-
-Sprint 8 Update:
-The engine now enforces RuntimePolicy (timeout, cancellation, token budget).
-It raises structured exceptions (HermesRuntimeError) when limits are exceeded.
-
-Sprint 10 Update:
-Added execute_ephemeral() to allow planners to run internal LLM calls 
-without permanently mutating the user's conversation history.
-Refactored LLM execution into a single _execute_llm() method to prevent drift.
+Sprint 12 Update:
+Added execute_parallel() to own concurrency and hide ThreadPoolExecutor from planners.
+Hardened execute_ephemeral() for thread safety by deep-copying request builder state.
 ===============================================================================
 """
 
@@ -29,6 +20,7 @@ from hermes.ai.response import AIResponse, ToolCall
 from hermes.ai.tool import ToolResult
 from hermes.core.errors import ExecutionCancelled, DeadlineExceeded, BudgetExceeded
 from hermes.core.runtime import RuntimeContext, RuntimeClock
+from hermes.runtime.parallel import ParallelExecutionService, ParallelJob, ParallelResult
 from hermes.agent.executor.protocols import PipelineProtocol
 from hermes.agent.executor.conversation_state import ConversationState
 from hermes.agent.executor.tool_runner import ToolRunner
@@ -65,16 +57,13 @@ class ExecutionEngine:
 
     @property
     def provider(self) -> str:
-        """Public accessor for the engine's configured provider."""
         return self._request_builder.provider
 
     @property
     def model(self) -> str:
-        """Public accessor for the engine's configured model."""
         return self._request_builder.model
 
     def _check_policy(self, trace: AgentTrace, iteration: int) -> None:
-        """Check all runtime policy limits and raise if exceeded."""
         if self._runtime_context is None:
             return
             
@@ -96,12 +85,10 @@ class ExecutionEngine:
         
         failed_reason = None
         
-        # 1. Cancellation
         if token and token.cancelled:
             checks["cancelled"] = True
             failed_reason = "cancelled"
             
-        # 2. Deadline
         if policy.timeout is not None:
             deadline = metrics.started_at + policy.timeout
             remaining_timeout = max(0.0, deadline - RuntimeClock.now())
@@ -109,7 +96,6 @@ class ExecutionEngine:
             if remaining_timeout <= 0.0 and failed_reason is None:
                 failed_reason = "deadline_exceeded"
                 
-        # 3. Token Budget
         used_tokens = metrics.used_tokens if metrics else 0
         if policy.max_tokens is not None:
             raw_tokens_remaining = policy.max_tokens - used_tokens
@@ -136,7 +122,6 @@ class ExecutionEngine:
             trace.add_event(iteration, TraceEventType.POLICY_PASS)
 
     def _execute_llm(self, trace: AgentTrace, iteration: int, config, request: AIRequest) -> AIResponse:
-        """Internal method to execute an LLM call and handle metrics/tracing."""
         trace.add_event(iteration, TraceEventType.LLM_START)
         
         response = self._pipeline.execute(
@@ -153,31 +138,25 @@ class ExecutionEngine:
             self._runtime_context.metrics.add_llm_call()
             
         trace.add_event(iteration, TraceEventType.LLM_FINISH, {"success": response.success})
-        
         self._check_policy(trace, iteration)
         return response
 
     def execute_ephemeral(self, trace: AgentTrace, iteration: int, config, prompt: str) -> AIResponse:
-        """
-        Executes a single LLM call with an ephemeral prompt.
-        The prompt is appended to the current conversation context for the API call,
-        but is NOT permanently saved in ConversationState.
-        """
+        """Executes a single LLM call with an ephemeral prompt. Thread-safe."""
         trace.add_event(iteration, TraceEventType.EXECUTION_START)
-        
-        # Note: Ephemeral calls do not increment execution_turns, 
-        # as they are planner reasoning calls, not main agent execution turns.
         self._check_policy(trace, iteration)
         
-        # Deep copy request to prevent mutation of shared options/metadata
-        request = copy.deepcopy(self._request_builder.build(self._conv_state.conversation))
+        # RequestBuilder.build() is already thread-safe (uses internal lock).
+        # No need for external lock here, which caused a deadlock.
+        base_request = self._request_builder.build(self._conv_state.conversation)
         
+        # Deep copy the request to prevent mutation of shared options/metadata
+        request = copy.deepcopy(base_request)
         messages = request.options.get("messages", [])
         messages.append({"role": "user", "content": prompt})
         request.options["messages"] = messages
         
         response = self._execute_llm(trace, iteration, config, request)
-        
         trace.add_event(iteration, TraceEventType.EXECUTION_FINISH, {"success": response.success})
         return response
 
@@ -188,7 +167,6 @@ class ExecutionEngine:
         if self._runtime_context:
             self._runtime_context.metrics.execution_turns += 1
         
-        # Check policy before starting the turn
         self._check_policy(trace, iteration)
         
         for tool_iter in range(1, config.engine_max_iterations + 1):
@@ -206,7 +184,6 @@ class ExecutionEngine:
                 trace.add_event(iteration, TraceEventType.EXECUTION_FINISH, {"success": True})
                 return response
 
-            # Handle Tool Calls
             self._conv_state.append_assistant_tool_calls(response)
             trace.add_event(iteration, TraceEventType.TOOL_START, {"tool_calls": len(response.tool_calls)})
 
@@ -230,11 +207,8 @@ class ExecutionEngine:
                     self._runtime_context.metrics.add_tool_call()
             
             trace.add_event(iteration, TraceEventType.TOOL_FINISH)
-            
-            # Check policy after tool execution
             self._check_policy(trace, iteration)
 
-        # Exceeded max tool iterations
         trace.add_event(iteration, TraceEventType.EXECUTION_FINISH, {"success": False, "reason": "engine_max_iterations"})
         return AIResponse(
             success=False,
@@ -242,6 +216,28 @@ class ExecutionEngine:
             provider=self.provider,
             model=self.model,
         )
+
+    def execute_parallel(self, trace: AgentTrace, iteration: int, config, jobs: List[ParallelJob]) -> List[ParallelResult]:
+        """
+        Executes a sequence of ParallelJobs concurrently.
+        Owns the ThreadPoolExecutor and enforces runtime policy limits.
+        """
+        max_workers = 5
+        timeout = None
+        token = None
+        
+        if self._runtime_context:
+            max_workers = self._runtime_context.policy.max_parallel_workers
+            timeout = self._runtime_context.policy.timeout
+            token = self._runtime_context.cancellation_token
+            
+        trace.add_event(iteration, TraceEventType.PARALLEL_STARTED, {"jobs": len(jobs), "workers": max_workers})
+        
+        service = ParallelExecutionService(max_workers=max_workers, thread_name_prefix="HermesWorker")
+        results = service.execute(jobs, cancellation_token=token, timeout=timeout)
+        
+        trace.add_event(iteration, TraceEventType.PARALLEL_COMPLETED, {"jobs": len(results)})
+        return results
 
 # VERIFICATION
 # ✔ imports
