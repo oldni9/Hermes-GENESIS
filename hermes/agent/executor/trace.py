@@ -48,13 +48,20 @@ class TraceEventType(str, Enum):
     TOT_BRANCH_EVALUATED = "tot_branch_evaluated"
     TOT_BRANCH_SELECTED = "tot_branch_selected"
     TOT_SEARCH_FINISHED = "tot_search_finished"
+    
+    # Debate Planner Events (Sprint 11)
+    DEBATE_STARTED = "debate_started"
+    DEBATER_STARTED = "debater_started"
+    DEBATER_RESPONSE = "debater_response"
+    DEBATER_FINISHED = "debater_finished"
+    JUDGE_STARTED = "judge_started"
+    JUDGE_FINISHED = "judge_finished"
+    DEBATE_COMPLETED = "debate_completed"
 
 
 @dataclass(slots=True)
 class TraceEvent:
-    """
-    A single event recorded during an agent execution loop.
-    """
+    """A single event recorded during an agent execution loop."""
     timestamp: float
     iteration: int
     event_type: TraceEventType
@@ -71,9 +78,7 @@ class TraceEvent:
 
 @dataclass(slots=True)
 class TraceMetrics:
-    """
-    Aggregate execution statistics.
-    """
+    """Aggregate execution statistics."""
     total_prompt_tokens: int = 0
     total_completion_tokens: int = 0
     total_cost: float = 0.0
@@ -89,10 +94,7 @@ class TraceMetrics:
 
 
 class AgentTrace:
-    """
-    Collects and stores trace events during an agent run.
-    Provides structured observability for debugging and telemetry.
-    """
+    """Collects and stores trace events during an agent run."""
 
     def __init__(self) -> None:
         self._events: List[TraceEvent] = []
@@ -102,23 +104,19 @@ class AgentTrace:
 
     @property
     def events(self) -> List[TraceEvent]:
-        """Return a copy of the recorded events."""
         return list(self._events)
 
     @property
     def metrics(self) -> TraceMetrics:
-        """Return the aggregate metrics."""
         return self._metrics
 
     @property
     def duration(self) -> float:
-        """Total execution duration in seconds."""
         if self._end_time is None:
             return time.time() - self._start_time
         return self._end_time - self._start_time
 
     def add_event(self, iteration: int, event_type: TraceEventType, payload: Optional[Dict[str, Any]] = None) -> None:
-        """Record a new trace event."""
         self._events.append(TraceEvent(
             timestamp=time.time(),
             iteration=iteration,
@@ -127,17 +125,14 @@ class AgentTrace:
         ))
 
     def add_token_usage(self, prompt_tokens: int, completion_tokens: int) -> None:
-        """Accumulate token usage metrics."""
         self._metrics.total_prompt_tokens += prompt_tokens
         self._metrics.total_completion_tokens += completion_tokens
 
     def finalize(self) -> None:
-        """Mark the trace as complete and lock in metrics."""
         self._end_time = time.time()
         self._metrics.duration = self.duration
 
     def to_dict(self) -> Dict[str, Any]:
-        """Serialize the trace to a dictionary."""
         return {
             "metrics": self._metrics.to_dict(),
             "events": [e.to_dict() for e in self._events],

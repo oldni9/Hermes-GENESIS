@@ -22,26 +22,10 @@ from hermes.core.runtime import RuntimeContext
 def make_text_response(text: str, tokens: int = 10) -> AIResponse:
     """Helper to create a standard text response with token usage."""
     prompt_t = tokens // 2
-    comp_t = tokens - prompt_t  # Ensures total is exactly `tokens` for odd numbers
-    
-    choice = ResponseChoice(
-        index=0,
-        message=ResponseMessage(role="assistant", content=text),
-        finish_reason="stop"
-    )
-    usage = ResponseUsage(
-        prompt_tokens=prompt_t,
-        completion_tokens=comp_t,
-        total_tokens=tokens
-    )
-    return AIResponse(
-        success=True,
-        provider="test",
-        model="test-model",
-        choices=[choice],
-        result=text,
-        usage=usage
-    )
+    comp_t = tokens - prompt_t
+    choice = ResponseChoice(index=0, message=ResponseMessage(role="assistant", content=text), finish_reason="stop")
+    usage = ResponseUsage(prompt_tokens=prompt_t, completion_tokens=comp_t, total_tokens=tokens)
+    return AIResponse(success=True, provider="test", model="test-model", choices=[choice], result=text, usage=usage)
 
 
 @pytest.fixture
@@ -72,7 +56,6 @@ def execution_engine(mock_pipeline, tool_manager):
         workspace=None,
         runtime_context=runtime_context
     )
-    
     return engine, trace, runtime_context
 
 
@@ -83,27 +66,22 @@ def ensure_planners_registered():
     from hermes.agent.executor.planners.react import ReActPlanner
     from hermes.agent.executor.planners.reflection import ReflectionPlanner
     from hermes.agent.executor.planners.tree_of_thought import TreeOfThoughtPlanner
+    from hermes.agent.executor.planners.debate import DebatePlanner
     
-    # Reset registry state if it was frozen by a previous test
-    if GLOBAL_PLANNER_REGISTRY._frozen:
-        GLOBAL_PLANNER_REGISTRY._frozen = False
-        GLOBAL_PLANNER_REGISTRY.clear()
-        
+    GLOBAL_PLANNER_REGISTRY.reset_for_testing()
+    
     if not GLOBAL_PLANNER_REGISTRY.contains("react"):
         GLOBAL_PLANNER_REGISTRY.register(PlannerDescriptor(
-            name="react",
-            planner_class=ReActPlanner,
-            description="Standard Reason + Act planner.",
-            aliases=["default"]
+            name="react", planner_class=ReActPlanner, description="Standard Reason + Act planner.", aliases=["default"]
         ))
         GLOBAL_PLANNER_REGISTRY.register(PlannerDescriptor(
-            name="reflection",
-            planner_class=ReflectionPlanner,
-            description="Planner that uses an LLM to critique and revise the answer."
+            name="reflection", planner_class=ReflectionPlanner, description="Planner that uses an LLM to critique and revise the answer."
         ))
         GLOBAL_PLANNER_REGISTRY.register(PlannerDescriptor(
-            name="tot",
-            planner_class=TreeOfThoughtPlanner,
-            description="Tree of Thought planner.",
+            name="tot", planner_class=TreeOfThoughtPlanner, description="Tree of Thought planner.",
             capabilities=GLOBAL_PLANNER_REGISTRY.get("react").capabilities.__class__(tree_search=True)
+        ))
+        GLOBAL_PLANNER_REGISTRY.register(PlannerDescriptor(
+            name="debate", planner_class=DebatePlanner, description="Debate planner.",
+            capabilities=GLOBAL_PLANNER_REGISTRY.get("react").capabilities.__class__(debate=True)
         ))

@@ -19,17 +19,12 @@ from hermes.agent.executor.planners.registry import (
 from hermes.agent.executor.planners.react import ReActPlanner
 from hermes.agent.executor.planners.reflection import ReflectionPlanner
 from hermes.agent.executor.errors import PlannerError
-from hermes.agent.executor.protocols import PipelineProtocol
 from hermes.bootstrap.bootstrap import register_builtin_planners
 
 
 @pytest.fixture
 def empty_registry():
     return PlannerRegistry()
-
-@pytest.fixture
-def mock_pipeline():
-    return MagicMock(spec=PipelineProtocol)
 
 def test_register_and_get(empty_registry):
     desc = PlannerDescriptor(name="react", planner_class=ReActPlanner)
@@ -71,11 +66,7 @@ def test_freeze_prevents_modification(empty_registry):
 
 def test_capabilities_metadata():
     caps = PlannerCapabilities(reflection=True, tree_search=True)
-    desc = PlannerDescriptor(
-        name="tot", 
-        planner_class=ReActPlanner, 
-        capabilities=caps
-    )
+    desc = PlannerDescriptor(name="tot", planner_class=ReActPlanner, capabilities=caps)
     
     assert desc.capabilities.reflection is True
     assert desc.capabilities.tree_search is True
@@ -89,34 +80,23 @@ def test_duplicate_registration_rejected(empty_registry):
     with pytest.raises(PlannerError, match="already registered"):
         empty_registry.register(desc2)
 
-def test_factory_instantiation(empty_registry, mock_pipeline):
+def test_factory_instantiation(empty_registry):
     empty_registry.register(PlannerDescriptor(name="react", planner_class=ReActPlanner))
     
     factory = PlannerFactory(empty_registry)
-    react_planner = factory.create("react", mock_pipeline, "test", "test-model")
+    react_planner = factory.create("react")
     assert isinstance(react_planner, ReActPlanner)
 
-def test_factory_alias_instantiation(empty_registry, mock_pipeline):
-    empty_registry.register(PlannerDescriptor(
-        name="react", 
-        planner_class=ReActPlanner, 
-        aliases=["default"]
-    ))
+def test_factory_alias_instantiation(empty_registry):
+    empty_registry.register(PlannerDescriptor(name="react", planner_class=ReActPlanner, aliases=["default"]))
     
     factory = PlannerFactory(empty_registry)
-    react_planner = factory.create("default", mock_pipeline, "test", "test-model")
+    react_planner = factory.create("default")
     assert isinstance(react_planner, ReActPlanner)
 
 def test_descriptors_returns_unique(empty_registry):
-    empty_registry.register(PlannerDescriptor(
-        name="react", 
-        planner_class=ReActPlanner, 
-        aliases=["default"]
-    ))
-    empty_registry.register(PlannerDescriptor(
-        name="reflection", 
-        planner_class=ReflectionPlanner
-    ))
+    empty_registry.register(PlannerDescriptor(name="react", planner_class=ReActPlanner, aliases=["default"]))
+    empty_registry.register(PlannerDescriptor(name="reflection", planner_class=ReflectionPlanner))
     
     descriptors = empty_registry.descriptors()
     assert len(descriptors) == 2
@@ -127,10 +107,7 @@ def test_descriptors_returns_unique(empty_registry):
 
 def test_bootstrap_freezes_global_registry():
     """Ensure that calling bootstrap freezes the global registry."""
-    # Clear any previous state just in case
-    GLOBAL_PLANNER_REGISTRY._frozen = False
-    GLOBAL_PLANNER_REGISTRY.clear()
-    
+    GLOBAL_PLANNER_REGISTRY.reset_for_testing()
     register_builtin_planners()
     
     assert GLOBAL_PLANNER_REGISTRY._frozen is True
@@ -140,16 +117,11 @@ def test_bootstrap_freezes_global_registry():
 
 def test_global_factory_lookup():
     """Ensure the global factory can instantiate built-in planners."""
-    # Clear and register
-    GLOBAL_PLANNER_REGISTRY._frozen = False
-    GLOBAL_PLANNER_REGISTRY.clear()
+    GLOBAL_PLANNER_REGISTRY.reset_for_testing()
     register_builtin_planners()
     
-    # Create using global factory
-    mock_pipe = MagicMock(spec=PipelineProtocol)
-    react_planner = GLOBAL_PLANNER_FACTORY.create("react", mock_pipe, "test", "test-model")
+    react_planner = GLOBAL_PLANNER_FACTORY.create("react")
     assert isinstance(react_planner, ReActPlanner)
     
-    # Create using alias
-    default_planner = GLOBAL_PLANNER_FACTORY.create("default", mock_pipe, "test", "test-model")
+    default_planner = GLOBAL_PLANNER_FACTORY.create("default")
     assert isinstance(default_planner, ReActPlanner)

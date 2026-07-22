@@ -1,7 +1,8 @@
-from hermes.agent.executor.planners.base import Planner, PlannerState, PlannerConfig, TreeOfThoughtConfig
+from hermes.agent.executor.planners.base import Planner, PlannerState, PlannerConfig, TreeOfThoughtConfig, DebateConfig, DebaterPersona
 from hermes.agent.executor.planners.react import ReActPlanner
 from hermes.agent.executor.planners.reflection import ReflectionPlanner
 from hermes.agent.executor.planners.tree_of_thought import TreeOfThoughtPlanner
+from hermes.agent.executor.planners.debate import DebatePlanner
 from hermes.agent.executor.planners.registry import (
     PlannerRegistry, 
     PlannerFactory, 
@@ -16,9 +17,12 @@ __all__ = [
     "PlannerState",
     "PlannerConfig",
     "TreeOfThoughtConfig",
+    "DebateConfig",
+    "DebaterPersona",
     "ReActPlanner",
     "ReflectionPlanner",
     "TreeOfThoughtPlanner",
+    "DebatePlanner",
     "PlannerRegistry",
     "PlannerFactory",
     "PlannerDescriptor",

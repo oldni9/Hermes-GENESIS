@@ -30,10 +30,7 @@ from hermes.agent.executor.trace import AgentTrace
 
 
 class AgentExecutor:
-    """
-    Public facade for the Agent system.
-    Wires the ExecutionEngine and Planner.
-    """
+    """Public facade for the Agent system."""
 
     def __init__(
         self,
@@ -50,16 +47,13 @@ class AgentExecutor:
         self._model = model
         self._config = config or PlannerConfig()
         
-        # Resolve planner instance using Factory or direct injection
         if isinstance(planner, Planner):
             self._planner = planner
         elif isinstance(planner, str):
-            self._planner = GLOBAL_PLANNER_FACTORY.create(planner, pipeline, provider, model)
+            self._planner = GLOBAL_PLANNER_FACTORY.create(planner)
         elif self._config.planner_name:
-            self._planner = GLOBAL_PLANNER_FACTORY.create(self._config.planner_name, pipeline, provider, model)
+            self._planner = GLOBAL_PLANNER_FACTORY.create(self._config.planner_name)
         else:
-            # Fallback to direct instantiation if no config or string is provided
-            # This shouldn't happen due to config default, but keeps it safe
             from hermes.agent.executor.planners.react import ReActPlanner
             self._planner = ReActPlanner()
 
@@ -73,14 +67,12 @@ class AgentExecutor:
         cancellation_token: Optional[CancellationToken] = None,
     ) -> AgentResult:
         """Run the agent loop for a given prompt."""
-        # 1. Initialize stateful components
         conv_state = ConversationState(conversation)
         context_factory = AgentContextFactory()
         tool_runner = ToolRunner(self._tool_manager)
         request_builder = RequestBuilder(provider=self._provider, model=self._model)
         trace = AgentTrace()
         
-        # 2. Initialize Runtime Context
         policy = policy or RuntimePolicy()
         cancellation_token = cancellation_token or CancellationToken()
         metrics = RuntimeMetrics()
@@ -91,7 +83,6 @@ class AgentExecutor:
             cancellation_token=cancellation_token
         )
 
-        # 3. Initialize the Execution Engine
         engine = ExecutionEngine(
             pipeline=self._pipeline,
             tool_runner=tool_runner,
@@ -102,26 +93,21 @@ class AgentExecutor:
             runtime_context=runtime_context,
         )
 
-        # 4. Prepare conversation
         if system_prompt:
             conv_state.append_system_if_empty(system_prompt)
         conv_state.append_user(prompt)
 
-        # 5. Initialize Planner State
         state = PlannerState(
             conversation=conv_state.conversation,
             trace=trace,
             iteration=0,
             reflection_count=0,
             runtime_context=runtime_context,
+            objective=prompt  # Sprint 11: Pass objective explicitly
         )
 
-        # 6. Delegate to Planner
         result = self._planner.run(engine, state, self._config)
-        
-        # Finalize metrics
         metrics.finish()
-        
         return result
 
 # VERIFICATION

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import List, Optional
 
 from hermes.ai.conversation import AIConversation
 from hermes.core.runtime import RuntimeContext
@@ -28,15 +28,14 @@ class PlannerState:
     trace: AgentTrace
     iteration: int = 0
     reflection_count: int = 0
-    
-    # Sprint 8 Addition
     runtime_context: Optional[RuntimeContext] = None
+    objective: str = ""  # Sprint 11: Decouples planners from conversation history
 
 
 @dataclass
 class PlannerConfig:
     """Configuration for planners and the execution engine."""
-    planner_name: str = "react"  # Default planner name
+    planner_name: str = "react"
     max_iterations: int = 10
     engine_max_iterations: int = 10
     max_reflections: int = 2
@@ -63,11 +62,42 @@ class TreeOfThoughtConfig(PlannerConfig):
     )
 
 
+@dataclass
+class DebaterPersona:
+    """Represents a single persona in a debate."""
+    name: str
+    system_prompt: str
+
+
+@dataclass
+class DebateConfig(PlannerConfig):
+    """Configuration specific to the Debate planner."""
+    planner_name: str = "debate"
+    debaters: int = 3
+    personas: List[DebaterPersona] = field(default_factory=lambda: [
+        DebaterPersona(name="Analyst", system_prompt="You are an Analyst. Provide a logical, structured perspective."),
+        DebaterPersona(name="Skeptic", system_prompt="You are a Skeptic. Identify flaws and counterarguments."),
+        DebaterPersona(name="Creative", system_prompt="You are a Creative thinker. Propose out-of-the-box ideas.")
+    ])
+    debater_prompt: str = "{system_prompt}\n\nPrompt: {prompt}"
+    judge_prompt: str = (
+        "You are a Judge. Here are {n} answers from different personas.\n"
+        "Synthesize the best final answer based on their arguments.\n\n"
+        "{debates}\n\nFinal Answer:"
+    )
+    
+    def __post_init__(self):
+        """Validates and extends personas if debaters > len(personas)."""
+        if len(self.personas) < self.debaters:
+            for i in range(len(self.personas), self.debaters):
+                self.personas.append(DebaterPersona(
+                    name=f"Debater {i+1}",
+                    system_prompt="You are a general debater."
+                ))
+
+
 class Planner(ABC):
-    """
-    Abstract Base Class for all planners.
-    Planners own the orchestration loop and return the final result.
-    """
+    """Abstract Base Class for all planners."""
     @abstractmethod
     def run(
         self, 
