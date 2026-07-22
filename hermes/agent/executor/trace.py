@@ -3,11 +3,8 @@
 Agent Trace & Observability
 ===============================================================================
 
-Sprint 12 Update:
-Added fine-grained locking (_event_lock, _metric_lock) to AgentTrace 
-to ensure thread-safe updates during parallel execution.
-Added sequence and thread metadata to TraceEvent for deterministic UI replay.
-Added PARALLEL_* trace events for parallel execution telemetry.
+Sprint 14 Update:
+Added GRAPH_* trace events for Execution Graph telemetry.
 ===============================================================================
 """
 
@@ -72,6 +69,12 @@ class TraceEventType(str, Enum):
     PARALLEL_JOB_FINISHED = "parallel_job_finished"
     PARALLEL_JOB_FAILED = "parallel_job_failed"
     PARALLEL_COMPLETED = "parallel_completed"
+    
+    # Execution Graph Events (Sprint 14)
+    GRAPH_STARTED = "graph_started"
+    NODE_STARTED = "node_started"
+    NODE_FINISHED = "node_finished"
+    GRAPH_FINISHED = "graph_finished"
 
 
 @dataclass(slots=True)

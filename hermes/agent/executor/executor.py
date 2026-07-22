@@ -3,9 +3,10 @@
 Agent Executor (Facade)
 ===============================================================================
 
-Sprint 13 Update:
-Executor queries the UnifiedMemoryManager (using manager's default policy) and 
-passes structured RetrievedContext to PlannerState.
+Sprint 14 Update:
+AgentExecutor now accepts an ExecutionPlan. If provided, it delegates
+execution to the GraphExecutor. It maps PlannerState to GraphContext,
+and maps the raw GraphResult.outputs to an AIResponse/AgentResult.
 ===============================================================================
 """
 
@@ -15,13 +16,14 @@ import time
 from typing import Optional, Union
 
 from hermes.ai.conversation import AIConversation
+from hermes.ai.response import AIResponse
 from hermes.ai.tool import ToolManager
 from hermes.core.runtime import RuntimePolicy, RuntimeContext, RuntimeMetrics, CancellationToken
 from hermes.memory.manager import UnifiedMemoryManager
 from hermes.memory.retrieval import RetrievedContext
 from hermes.workspace.workspace import Workspace
 from hermes.agent.executor.protocols import PipelineProtocol
-from hermes.agent.executor.result import AgentResult
+from hermes.agent.executor.result import AgentResult, StopReason
 from hermes.agent.executor.conversation_state import ConversationState
 from hermes.agent.executor.tool_runner import ToolRunner
 from hermes.agent.executor.context_factory import AgentContextFactory
@@ -30,6 +32,9 @@ from hermes.agent.executor.engine import ExecutionEngine
 from hermes.agent.executor.planners.base import Planner, PlannerState, PlannerConfig
 from hermes.agent.executor.planners.registry import GLOBAL_PLANNER_FACTORY
 from hermes.agent.executor.trace import AgentTrace
+from hermes.graph.plan import ExecutionPlan
+from hermes.graph.executor import GraphExecutor
+from hermes.graph.models import GraphContext, Blackboard, GraphExecutionError
 
 
 class AgentExecutor:
@@ -41,7 +46,7 @@ class AgentExecutor:
         tool_manager: ToolManager,
         provider: str,
         model: str = "",
-        planner: Optional[Union[str, Planner]] = None,
+        planner: Optional[Union[str, Planner, ExecutionPlan]] = None,
         config: Optional[PlannerConfig] = None,
         memory_manager: Optional[UnifiedMemoryManager] = None,
     ) -> None:
@@ -52,7 +57,12 @@ class AgentExecutor:
         self._config = config or PlannerConfig()
         self._memory_manager = memory_manager
         
-        if isinstance(planner, Planner):
+        self._execution_plan: Optional[ExecutionPlan] = None
+        self._planner: Optional[Planner] = None
+        
+        if isinstance(planner, ExecutionPlan):
+            self._execution_plan = planner
+        elif isinstance(planner, Planner):
             self._planner = planner
         elif isinstance(planner, str):
             self._planner = GLOBAL_PLANNER_FACTORY.create(planner)
@@ -98,28 +108,76 @@ class AgentExecutor:
             runtime_context=runtime_context,
         )
 
-        # Sprint 13: Memory Retrieval (Manager owns default policy)
         retrieved_context: Optional[RetrievedContext] = None
         if self._memory_manager:
             retrieved_context = self._memory_manager.recall(prompt)
 
-        # Prepare conversation (System prompt is kept pure)
         if system_prompt:
             conv_state.append_system_if_empty(system_prompt)
         conv_state.append_user(prompt)
 
-        state = PlannerState(
-            conversation=conv_state.conversation,
-            trace=trace,
-            iteration=0,
-            reflection_count=0,
-            runtime_context=runtime_context,
-            objective=prompt,
-            retrieved_context=retrieved_context
-        )
-
-        # Delegate to Planner
-        result = self._planner.run(engine, state, self._config)
+        if self._execution_plan:
+            graph_context = GraphContext(
+                conversation=conv_state.conversation,
+                runtime_context=runtime_context,
+                trace=trace,
+                blackboard=Blackboard({
+                    "objective": prompt,
+                    "retrieved_context": retrieved_context
+                })
+            )
+            
+            graph_executor = GraphExecutor()
+            
+            try:
+                graph_result = graph_executor.run(
+                    self._execution_plan.graph, 
+                    graph_context
+                )
+                
+                # Safely resolve the final text using the exit node's output_key
+                exit_node = self._execution_plan.graph.nodes[self._execution_plan.graph.exit_node]
+                final_text = graph_result.outputs.get(exit_node.output_key, "")
+                
+                result = AgentResult(
+                    response=AIResponse(
+                        success=graph_result.success, 
+                        result=final_text, 
+                        provider=self._provider, 
+                        model=self._model
+                    ),
+                    iterations=1,
+                    duration=graph_result.duration,
+                    token_usage=graph_result.token_usage,
+                    stop_reason=StopReason.COMPLETED if graph_result.success else StopReason.PIPELINE_ERROR,
+                    trace=trace,
+                    memory_candidates=graph_result.memory_candidates
+                )
+            except GraphExecutionError as e:
+                result = AgentResult(
+                    response=AIResponse(
+                        success=False, 
+                        message=f"Graph execution failed at node '{e.node_id}': {e.original}", 
+                        provider=self._provider, 
+                        model=self._model
+                    ),
+                    iterations=1,
+                    duration=0.0,
+                    stop_reason=StopReason.PIPELINE_ERROR,
+                    trace=e.trace,
+                    memory_candidates=e.blackboard_snapshot.get("memory_candidates", [])
+                )
+        else:
+            state = PlannerState(
+                conversation=conv_state.conversation,
+                trace=trace,
+                iteration=0,
+                reflection_count=0,
+                runtime_context=runtime_context,
+                objective=prompt,
+                retrieved_context=retrieved_context
+            )
+            result = self._planner.run(engine, state, self._config)
         
         metrics.finish()
         return result
