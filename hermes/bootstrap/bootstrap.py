@@ -31,16 +31,17 @@ from hermes.kernel.executor import KernelExecutor
 from hermes.providers.manager import ProviderManager
 from hermes.runtime.engine import RuntimeEngine
 
-# Sprint 9 Planner Registry imports
-from hermes.agent.executor.planners.registry import planner_registry, PlannerDescriptor, PlannerCapabilities
+# Sprint 9 & 10 Planner Registry imports
+from hermes.agent.executor.planners.registry import GLOBAL_PLANNER_REGISTRY, PlannerDescriptor, PlannerCapabilities
 from hermes.agent.executor.planners.react import ReActPlanner
 from hermes.agent.executor.planners.reflection import ReflectionPlanner
+from hermes.agent.executor.planners.tree_of_thought import TreeOfThoughtPlanner
 
 
 def register_builtin_planners():
     """Registers all built-in planners into the global registry."""
     
-    planner_registry.register(PlannerDescriptor(
+    GLOBAL_PLANNER_REGISTRY.register(PlannerDescriptor(
         name="react",
         planner_class=ReActPlanner,
         description="Standard Reason + Act planner.",
@@ -48,15 +49,22 @@ def register_builtin_planners():
         capabilities=PlannerCapabilities()
     ))
     
-    planner_registry.register(PlannerDescriptor(
+    GLOBAL_PLANNER_REGISTRY.register(PlannerDescriptor(
         name="reflection",
         planner_class=ReflectionPlanner,
         description="Planner that uses an LLM to critique and revise the answer.",
         capabilities=PlannerCapabilities(reflection=True)
     ))
     
+    GLOBAL_PLANNER_REGISTRY.register(PlannerDescriptor(
+        name="tot",
+        planner_class=TreeOfThoughtPlanner,
+        description="Tree of Thought planner. Generates and evaluates multiple branches.",
+        capabilities=PlannerCapabilities(tree_search=True)
+    ))
+    
     # Freeze registry after bootstrap
-    planner_registry.freeze()
+    GLOBAL_PLANNER_REGISTRY.freeze()
 
 
 class HermesBootstrap:
@@ -68,7 +76,7 @@ class HermesBootstrap:
         container = HermesContainer()
 
         # --------------------------------------------------------------
-        # Register Built-in Planners (Sprint 9)
+        # Register Built-in Planners (Sprint 9 & 10)
         # --------------------------------------------------------------
         register_builtin_planners()
 

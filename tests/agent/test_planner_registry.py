@@ -13,8 +13,8 @@ from hermes.agent.executor.planners.registry import (
     PlannerFactory, 
     PlannerDescriptor,
     PlannerCapabilities,
-    planner_registry,
-    planner_factory
+    GLOBAL_PLANNER_REGISTRY,
+    GLOBAL_PLANNER_FACTORY
 )
 from hermes.agent.executor.planners.react import ReActPlanner
 from hermes.agent.executor.planners.reflection import ReflectionPlanner
@@ -128,28 +128,28 @@ def test_descriptors_returns_unique(empty_registry):
 def test_bootstrap_freezes_global_registry():
     """Ensure that calling bootstrap freezes the global registry."""
     # Clear any previous state just in case
-    planner_registry._frozen = False
-    planner_registry.clear()
+    GLOBAL_PLANNER_REGISTRY._frozen = False
+    GLOBAL_PLANNER_REGISTRY.clear()
     
     register_builtin_planners()
     
-    assert planner_registry._frozen is True
+    assert GLOBAL_PLANNER_REGISTRY._frozen is True
     
     with pytest.raises(PlannerError, match="Registry is frozen"):
-        planner_registry.register(PlannerDescriptor(name="test", planner_class=ReActPlanner))
+        GLOBAL_PLANNER_REGISTRY.register(PlannerDescriptor(name="test", planner_class=ReActPlanner))
 
 def test_global_factory_lookup():
     """Ensure the global factory can instantiate built-in planners."""
     # Clear and register
-    planner_registry._frozen = False
-    planner_registry.clear()
+    GLOBAL_PLANNER_REGISTRY._frozen = False
+    GLOBAL_PLANNER_REGISTRY.clear()
     register_builtin_planners()
     
     # Create using global factory
     mock_pipe = MagicMock(spec=PipelineProtocol)
-    react_planner = planner_factory.create("react", mock_pipe, "test", "test-model")
+    react_planner = GLOBAL_PLANNER_FACTORY.create("react", mock_pipe, "test", "test-model")
     assert isinstance(react_planner, ReActPlanner)
     
     # Create using alias
-    default_planner = planner_factory.create("default", mock_pipe, "test", "test-model")
+    default_planner = GLOBAL_PLANNER_FACTORY.create("default", mock_pipe, "test", "test-model")
     assert isinstance(default_planner, ReActPlanner)

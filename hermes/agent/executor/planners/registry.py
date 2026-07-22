@@ -55,7 +55,7 @@ class PlannerRegistry:
         if self._frozen:
             raise PlannerError("Registry is frozen and cannot be modified.")
             
-        # Strict subclass validation (Planner is now @runtime_checkable)
+        # Strict subclass validation
         try:
             if not issubclass(descriptor.planner_class, Planner):
                 raise PlannerError(f"Class '{descriptor.planner_class.__name__}' is not a subclass of Planner.")
@@ -172,8 +172,8 @@ class PlannerFactory:
 # Global Singleton Instances
 # =============================================================================
 
-planner_registry = PlannerRegistry()
-planner_factory = PlannerFactory(planner_registry)
+GLOBAL_PLANNER_REGISTRY = PlannerRegistry()
+GLOBAL_PLANNER_FACTORY = PlannerFactory(GLOBAL_PLANNER_REGISTRY)
 
 # VERIFICATION
 # ✔ imports

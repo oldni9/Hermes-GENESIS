@@ -21,13 +21,13 @@ from hermes.agent.executor.result import AgentResult, StopReason
 from hermes.agent.executor.trace import AgentTrace, TraceEventType
 
 
-class ReActPlanner:
+class ReActPlanner(Planner):
     """
     Standard ReAct planner. Executes turns until completion or max iterations.
     """
-    def __init__(self, pipeline: Any = None, provider: str = "", model: str = "") -> None:
-        # ReAct planner doesn't need to make direct LLM calls, so it ignores these.
-        # The signature is here to satisfy the Planner protocol for the factory.
+    def __init__(self, **kwargs: Any) -> None:
+        # ExecutionEngine provides all runtime dependencies.
+        # Planner intentionally stores no provider/model state.
         pass
 
     def run(self, engine: ExecutionEngine, state: PlannerState, config: PlannerConfig) -> AgentResult:
@@ -61,8 +61,8 @@ class ReActPlanner:
                 final_response = AIResponse(
                     success=False,
                     message=str(e),
-                    provider=engine._request_builder.provider,
-                    model=engine._request_builder.model,
+                    provider=engine.provider,
+                    model=engine.model,
                 )
                 return AgentResult(
                     response=final_response,
@@ -105,8 +105,8 @@ class ReActPlanner:
         final_response = AIResponse(
             success=False,
             message=f"Agent reached maximum iterations ({config.max_iterations}) without a final response.",
-            provider=engine._request_builder.provider,
-            model=engine._request_builder.model,
+            provider=engine.provider,
+            model=engine.model,
         )
         state.trace.add_event(config.max_iterations, TraceEventType.MAX_ITERATIONS_EXCEEDED)
         state.trace.add_event(config.max_iterations, TraceEventType.ITERATION_FINISH)

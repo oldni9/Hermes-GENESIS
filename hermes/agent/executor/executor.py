@@ -25,7 +25,7 @@ from hermes.agent.executor.context_factory import AgentContextFactory
 from hermes.agent.executor.request_builder import RequestBuilder
 from hermes.agent.executor.engine import ExecutionEngine
 from hermes.agent.executor.planners.base import Planner, PlannerState, PlannerConfig
-from hermes.agent.executor.planners.registry import planner_factory
+from hermes.agent.executor.planners.registry import GLOBAL_PLANNER_FACTORY
 from hermes.agent.executor.trace import AgentTrace
 
 
@@ -54,9 +54,9 @@ class AgentExecutor:
         if isinstance(planner, Planner):
             self._planner = planner
         elif isinstance(planner, str):
-            self._planner = planner_factory.create(planner, pipeline, provider, model)
+            self._planner = GLOBAL_PLANNER_FACTORY.create(planner, pipeline, provider, model)
         elif self._config.planner_name:
-            self._planner = planner_factory.create(self._config.planner_name, pipeline, provider, model)
+            self._planner = GLOBAL_PLANNER_FACTORY.create(self._config.planner_name, pipeline, provider, model)
         else:
             # Fallback to direct instantiation if no config or string is provided
             # This shouldn't happen due to config default, but keeps it safe

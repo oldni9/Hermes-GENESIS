@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 from hermes.ai.conversation import AIConversation
 from hermes.ai.response import AIResponse, ResponseChoice, ResponseMessage
-from hermes.agent.executor import AgentExecutor, AgentTrace, PlannerConfig
+from hermes.agent.executor import AgentExecutor, AgentTrace, PlannerConfig, StopReason
 from hermes.agent.executor.planners.reflection import ReflectionPlanner
 from hermes.agent.executor.planners.react import ReActPlanner
 from hermes.agent.executor.protocols import PipelineProtocol
@@ -38,7 +38,7 @@ def test_reflection_planner_approves_immediately(mock_pipeline, tool_manager):
         make_text_response("APPROVED")     # Critic turn 1
     ]
     
-    planner = ReflectionPlanner(mock_pipeline, "test", "test-model")
+    planner = ReflectionPlanner()
     agent = AgentExecutor(
         pipeline=mock_pipeline,
         tool_manager=tool_manager,
@@ -53,7 +53,7 @@ def test_reflection_planner_approves_immediately(mock_pipeline, tool_manager):
     assert result.response.success
     assert result.response.text() == "42"
     assert result.iterations == 1
-    assert result.stop_reason == "completed"
+    assert result.stop_reason == StopReason.COMPLETED
 
 def test_reflection_planner_rejects_and_retries(mock_pipeline, tool_manager):
     # Engine returns "42". Critic rejects. Engine returns "44". Critic approves.
@@ -64,7 +64,7 @@ def test_reflection_planner_rejects_and_retries(mock_pipeline, tool_manager):
         make_text_response("APPROVED")     # Critic turn 2
     ]
     
-    planner = ReflectionPlanner(mock_pipeline, "test", "test-model")
+    planner = ReflectionPlanner()
     agent = AgentExecutor(
         pipeline=mock_pipeline,
         tool_manager=tool_manager,
@@ -79,7 +79,7 @@ def test_reflection_planner_rejects_and_retries(mock_pipeline, tool_manager):
     assert result.response.success
     assert result.response.text() == "44"
     assert result.iterations == 2
-    assert result.stop_reason == "completed"
+    assert result.stop_reason == StopReason.COMPLETED
 
 def test_reflection_planner_stops_at_max_reflections(mock_pipeline, tool_manager):
     # Critic always says REJECT
@@ -90,7 +90,7 @@ def test_reflection_planner_stops_at_max_reflections(mock_pipeline, tool_manager
         make_text_response("REJECT: Still wrong.")
     ]
     
-    planner = ReflectionPlanner(mock_pipeline, "test", "test-model")
+    planner = ReflectionPlanner()
     agent = AgentExecutor(
         pipeline=mock_pipeline,
         tool_manager=tool_manager,
@@ -103,5 +103,5 @@ def test_reflection_planner_stops_at_max_reflections(mock_pipeline, tool_manager
     result = agent.run("What is 40+4?", AIConversation())
     
     assert not result.response.success
-    assert result.stop_reason == "max_reflections"
+    assert result.stop_reason == StopReason.MAX_REFLECTIONS
     assert result.iterations == 2

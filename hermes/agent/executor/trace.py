@@ -42,6 +42,12 @@ class TraceEventType(str, Enum):
     CANCELLED = "cancelled"
     DEADLINE_EXCEEDED = "deadline_exceeded"
     BUDGET_EXCEEDED = "budget_exceeded"
+    
+    # Tree of Thought Events (Sprint 10)
+    TOT_BRANCH_GENERATED = "tot_branch_generated"
+    TOT_BRANCH_EVALUATED = "tot_branch_evaluated"
+    TOT_BRANCH_SELECTED = "tot_branch_selected"
+    TOT_SEARCH_FINISHED = "tot_search_finished"
 
 
 @dataclass(slots=True)

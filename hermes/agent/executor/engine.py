@@ -10,14 +10,21 @@ It is completely stateless and instructed by the Planner.
 Sprint 8 Update:
 The engine now enforces RuntimePolicy (timeout, cancellation, token budget).
 It raises structured exceptions (HermesRuntimeError) when limits are exceeded.
+
+Sprint 10 Update:
+Added execute_ephemeral() to allow planners to run internal LLM calls 
+without permanently mutating the user's conversation history.
+Refactored LLM execution into a single _execute_llm() method to prevent drift.
 ===============================================================================
 """
 
 from __future__ import annotations
 
+import copy
 import time
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
+from hermes.ai.request import AIRequest
 from hermes.ai.response import AIResponse, ToolCall
 from hermes.ai.tool import ToolResult
 from hermes.core.errors import ExecutionCancelled, DeadlineExceeded, BudgetExceeded
@@ -56,6 +63,16 @@ class ExecutionEngine:
         self._workspace = workspace
         self._runtime_context = runtime_context
 
+    @property
+    def provider(self) -> str:
+        """Public accessor for the engine's configured provider."""
+        return self._request_builder.provider
+
+    @property
+    def model(self) -> str:
+        """Public accessor for the engine's configured model."""
+        return self._request_builder.model
+
     def _check_policy(self, trace: AgentTrace, iteration: int) -> None:
         """Check all runtime policy limits and raise if exceeded."""
         if self._runtime_context is None:
@@ -65,7 +82,6 @@ class ExecutionEngine:
         metrics = self._runtime_context.metrics
         token = self._runtime_context.cancellation_token
         
-        # Prepare full telemetry payload
         checks = {
             "timeout_remaining": None,
             "tokens_remaining": None,
@@ -100,7 +116,6 @@ class ExecutionEngine:
             tokens_remaining = max(0, raw_tokens_remaining)
             checks["tokens_remaining"] = tokens_remaining
             checks["budget_remaining"] = tokens_remaining
-            # Strictly exceeded (less than 0). If it's exactly 0, we allow it to finish.
             if raw_tokens_remaining < 0 and failed_reason is None:
                 failed_reason = "budget_exceeded"
                 
@@ -120,6 +135,52 @@ class ExecutionEngine:
         else:
             trace.add_event(iteration, TraceEventType.POLICY_PASS)
 
+    def _execute_llm(self, trace: AgentTrace, iteration: int, config, request: AIRequest) -> AIResponse:
+        """Internal method to execute an LLM call and handle metrics/tracing."""
+        trace.add_event(iteration, TraceEventType.LLM_START)
+        
+        response = self._pipeline.execute(
+            provider=self._request_builder.provider,
+            request=request,
+            context=None,
+            use_cache=False,
+        )
+        
+        if self._runtime_context and self._runtime_context.metrics:
+            if response.usage:
+                self._runtime_context.metrics.add_tokens(response.usage.prompt_tokens, response.usage.completion_tokens)
+                trace.add_token_usage(response.usage.prompt_tokens, response.usage.completion_tokens)
+            self._runtime_context.metrics.add_llm_call()
+            
+        trace.add_event(iteration, TraceEventType.LLM_FINISH, {"success": response.success})
+        
+        self._check_policy(trace, iteration)
+        return response
+
+    def execute_ephemeral(self, trace: AgentTrace, iteration: int, config, prompt: str) -> AIResponse:
+        """
+        Executes a single LLM call with an ephemeral prompt.
+        The prompt is appended to the current conversation context for the API call,
+        but is NOT permanently saved in ConversationState.
+        """
+        trace.add_event(iteration, TraceEventType.EXECUTION_START)
+        
+        # Note: Ephemeral calls do not increment execution_turns, 
+        # as they are planner reasoning calls, not main agent execution turns.
+        self._check_policy(trace, iteration)
+        
+        # Deep copy request to prevent mutation of shared options/metadata
+        request = copy.deepcopy(self._request_builder.build(self._conv_state.conversation))
+        
+        messages = request.options.get("messages", [])
+        messages.append({"role": "user", "content": prompt})
+        request.options["messages"] = messages
+        
+        response = self._execute_llm(trace, iteration, config, request)
+        
+        trace.add_event(iteration, TraceEventType.EXECUTION_FINISH, {"success": response.success})
+        return response
+
     def execute_turn(self, trace: AgentTrace, iteration: int, config) -> AIResponse:
         """Run the LLM -> Tool loop until a final answer is reached or tools max out."""
         trace.add_event(iteration, TraceEventType.EXECUTION_START)
@@ -134,27 +195,8 @@ class ExecutionEngine:
             if self._runtime_context:
                 self._runtime_context.metrics.tool_iterations += 1
 
-            trace.add_event(iteration, TraceEventType.LLM_START)
             request = self._request_builder.build(self._conv_state.conversation)
-            
-            response = self._pipeline.execute(
-                provider=self._request_builder.provider,
-                request=request,
-                context=None,
-                use_cache=False,
-            )
-            
-            # Update metrics after LLM call and sync to trace
-            if self._runtime_context and self._runtime_context.metrics:
-                if response.usage:
-                    self._runtime_context.metrics.add_tokens(response.usage.prompt_tokens, response.usage.completion_tokens)
-                    trace.add_token_usage(response.usage.prompt_tokens, response.usage.completion_tokens)
-                self._runtime_context.metrics.add_llm_call()
-                
-            trace.add_event(iteration, TraceEventType.LLM_FINISH, {"success": response.success})
-
-            # Check policy after LLM call (token budget might be exceeded now)
-            self._check_policy(trace, iteration)
+            response = self._execute_llm(trace, iteration, config, request)
 
             if not response.success:
                 trace.add_event(iteration, TraceEventType.EXECUTION_FINISH, {"success": False})
@@ -197,8 +239,8 @@ class ExecutionEngine:
         return AIResponse(
             success=False,
             message=f"Execution engine exceeded max iterations ({config.engine_max_iterations}).",
-            provider=self._request_builder.provider,
-            model=self._request_builder.model,
+            provider=self.provider,
+            model=self.model,
         )
 
 # VERIFICATION

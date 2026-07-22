@@ -6,32 +6,35 @@ Reflection Planner
 Adds a self-critique loop. After execution, it asks a critic LLM to review
 the answer. If rejected, it injects the critique and continues.
 Stateless: tracks reflections via PlannerState.
+
+Sprint 10.1 Fix:
+- Refactored to use engine.execute_ephemeral() for critic calls.
+- No longer manually constructs AIRequest or bypasses ExecutionEngine.
 ===============================================================================
 """
 
 from __future__ import annotations
 
 import time
+from typing import Any
 
-from hermes.ai.request import AIRequest
 from hermes.ai.response import AIResponse
 from hermes.core.errors import HermesRuntimeError, ExecutionCancelled, DeadlineExceeded, BudgetExceeded
 from hermes.agent.executor.engine import ExecutionEngine
 from hermes.agent.executor.planners.base import Planner, PlannerState, PlannerConfig
-from hermes.agent.executor.protocols import PipelineProtocol
 from hermes.agent.executor.result import AgentResult, StopReason
 from hermes.agent.executor.trace import AgentTrace, TraceEventType
 
 
-class ReflectionPlanner:
+class ReflectionPlanner(Planner):
     """
     A planner that uses an LLM to critique the execution engine's output.
     Stateless; relies on PlannerState for iteration tracking.
     """
-    def __init__(self, pipeline: PipelineProtocol, provider: str, model: str = ""):
-        self._pipeline = pipeline
-        self._provider = provider
-        self._model = model
+    def __init__(self, **kwargs: Any) -> None:
+        # ExecutionEngine provides all runtime dependencies.
+        # Planner intentionally stores no provider/model state.
+        pass
 
     def run(self, engine: ExecutionEngine, state: PlannerState, config: PlannerConfig) -> AgentResult:
         start_time = time.time()
@@ -64,8 +67,8 @@ class ReflectionPlanner:
                 final_response = AIResponse(
                     success=False,
                     message=str(e),
-                    provider=self._provider,
-                    model=self._model,
+                    provider=engine.provider,
+                    model=engine.model,
                 )
                 return AgentResult(
                     response=final_response,
@@ -89,9 +92,10 @@ class ReflectionPlanner:
                     trace=state.trace
                 )
 
-            # 2. Ask Critic
+            # 2. Ask Critic via Engine's ephemeral execution (keeps conversation pure)
             state.trace.add_event(state.iteration, TraceEventType.REFLECTION_START)
-            critique_response = self._ask_critic(exec_response, config)
+            critique_prompt = config.reflection_prompt.format(answer=exec_response.text())
+            critique_response = engine.execute_ephemeral(state.trace, state.iteration, config, critique_prompt)
             
             approved = critique_response.text().strip().upper().startswith("APPROVED")
             
@@ -112,7 +116,7 @@ class ReflectionPlanner:
                     trace=state.trace
                 )
 
-            # 3. Inject Critique and Loop
+            # 3. Inject Critique and Loop (Permanently into conversation so Engine knows context)
             critique_text = critique_response.text()
             state.conversation.add_assistant(exec_response.text() or "")
             state.conversation.add_user(f"Critique: {critique_text}\n\nPlease revise your previous answer based on this critique.")
@@ -127,8 +131,8 @@ class ReflectionPlanner:
         final_response = AIResponse(
             success=False,
             message=f"Agent reached maximum reflections ({config.max_reflections}) without approval.",
-            provider=self._provider,
-            model=self._model,
+            provider=engine.provider,
+            model=engine.model,
         )
         return AgentResult(
             response=final_response,
@@ -137,29 +141,6 @@ class ReflectionPlanner:
             token_usage={"prompt_tokens": state.trace.metrics.total_prompt_tokens, "completion_tokens": state.trace.metrics.total_completion_tokens},
             stop_reason=StopReason.MAX_REFLECTIONS,
             trace=state.trace
-        )
-
-    def _ask_critic(self, response: AIResponse, config: PlannerConfig) -> AIResponse:
-        """Run a separate LLM call to critique the last answer."""
-        answer = response.text()
-        prompt_text = config.reflection_prompt.format(answer=answer)
-        
-        messages = [{"role": "user", "content": prompt_text}]
-        request = AIRequest(
-            prompt="",
-            input=None,
-            provider=self._provider,
-            model=self._model,
-            task="chat",
-            options={"messages": messages},
-            metadata={},
-        )
-        
-        return self._pipeline.execute(
-            provider=self._provider,
-            request=request,
-            context=None,
-            use_cache=False,
         )
 
 # VERIFICATION

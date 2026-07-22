@@ -79,24 +79,31 @@ def execution_engine(mock_pipeline, tool_manager):
 @pytest.fixture(autouse=True)
 def ensure_planners_registered():
     """Ensures the global planner registry has builtin planners for tests."""
-    from hermes.agent.executor.planners.registry import planner_registry, PlannerDescriptor
+    from hermes.agent.executor.planners.registry import GLOBAL_PLANNER_REGISTRY, PlannerDescriptor
     from hermes.agent.executor.planners.react import ReActPlanner
     from hermes.agent.executor.planners.reflection import ReflectionPlanner
+    from hermes.agent.executor.planners.tree_of_thought import TreeOfThoughtPlanner
     
     # Reset registry state if it was frozen by a previous test
-    if planner_registry._frozen:
-        planner_registry._frozen = False
-        planner_registry.clear()
+    if GLOBAL_PLANNER_REGISTRY._frozen:
+        GLOBAL_PLANNER_REGISTRY._frozen = False
+        GLOBAL_PLANNER_REGISTRY.clear()
         
-    if not planner_registry.contains("react"):
-        planner_registry.register(PlannerDescriptor(
+    if not GLOBAL_PLANNER_REGISTRY.contains("react"):
+        GLOBAL_PLANNER_REGISTRY.register(PlannerDescriptor(
             name="react",
             planner_class=ReActPlanner,
             description="Standard Reason + Act planner.",
             aliases=["default"]
         ))
-        planner_registry.register(PlannerDescriptor(
+        GLOBAL_PLANNER_REGISTRY.register(PlannerDescriptor(
             name="reflection",
             planner_class=ReflectionPlanner,
             description="Planner that uses an LLM to critique and revise the answer."
+        ))
+        GLOBAL_PLANNER_REGISTRY.register(PlannerDescriptor(
+            name="tot",
+            planner_class=TreeOfThoughtPlanner,
+            description="Tree of Thought planner.",
+            capabilities=GLOBAL_PLANNER_REGISTRY.get("react").capabilities.__class__(tree_search=True)
         ))
