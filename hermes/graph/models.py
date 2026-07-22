@@ -3,19 +3,23 @@
 Execution Graph Models
 ===============================================================================
 
-Sprint 14: Core data structures for the Execution Graph subsystem.
-Kept completely free of AI layer dependencies.
+Sprint 15.1 Update:
+Added GraphRunner and ParallelRunner protocols.
+NodeResult is frozen (immutable) to prevent post-merge mutation.
+NodeMetadata remains mutable to avoid false immutability, but uses Tuples for collections.
 ===============================================================================
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, Protocol, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from hermes.ai.conversation import AIConversation
     from hermes.core.runtime import RuntimeContext
     from hermes.agent.executor.trace import AgentTrace
+    from hermes.runtime.parallel import ParallelJob, ParallelResult
+    from hermes.core.runtime import CancellationToken
 
 
 class GraphExecutionError(Exception):
@@ -68,22 +72,68 @@ class GraphContext:
 
 
 @dataclass
+class NodeMetadata:
+    """Typed metadata for a NodeResult. Uses tuples for collections, but remains mutable."""
+    duration: float = 0.0
+    token_usage: Dict[str, int] = field(default_factory=dict)
+    memory_candidates: Tuple[Any, ...] = field(default_factory=tuple)
+    trace: Optional["AgentTrace"] = None
+    branch_metadata: Tuple["NodeMetadata", ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
 class NodeResult:
-    """Standardized result returned by every GraphNode."""
+    """Standardized, immutable result returned by every GraphNode."""
     success: bool
     outputs: Dict[str, Any] = field(default_factory=dict)
     stop: bool = False
+    metadata: NodeMetadata = field(default_factory=NodeMetadata)
 
 
 @dataclass
 class GraphResult:
-    """Result returned by the GraphExecutor, containing raw outputs."""
+    """Result returned by the GraphRunner, containing raw outputs."""
     success: bool
     outputs: Dict[str, Any]
     duration: float
     trace: "AgentTrace"
     memory_candidates: List[Any] = field(default_factory=list)
     token_usage: Dict[str, int] = field(default_factory=dict)
+
+    def to_node_result(self) -> NodeResult:
+        """Centralized conversion from GraphResult to NodeResult, preserving metadata."""
+        return NodeResult(
+            success=self.success,
+            outputs=self.outputs,
+            stop=not self.success,
+            metadata=NodeMetadata(
+                duration=self.duration,
+                token_usage=self.token_usage,
+                memory_candidates=tuple(self.memory_candidates),
+                trace=self.trace
+            )
+        )
+
+
+class GraphRunner(Protocol):
+    """Protocol for executing an ExecutionGraph, decoupling nodes from the executor."""
+    def run(
+        self, 
+        graph: "ExecutionGraph", 
+        context: GraphContext
+    ) -> GraphResult:
+        ...
+
+
+class ParallelRunner(Protocol):
+    """Protocol for executing parallel jobs, decoupling nodes from the service."""
+    def execute(
+        self, 
+        jobs: List["ParallelJob"], 
+        cancellation_token: Optional["CancellationToken"] = None,
+        timeout: Optional[float] = None
+    ) -> List["ParallelResult"]:
+        ...
 
 
 @dataclass(frozen=True)
@@ -166,7 +216,6 @@ class ExecutionGraph:
                 raise ValueError(f"Duplicate edge detected: {edge.source} -> {edge.target}")
             edge_set.add((edge.source, edge.target))
 
-        # 1. In-degree and out-degree checks
         in_degree = {n: 0 for n in self._nodes}
         out_degree = {n: 0 for n in self._nodes}
         for edge in self._edges:
@@ -181,7 +230,6 @@ class ExecutionGraph:
         if len(leaves) != 1 or leaves[0] != self._exit_node:
             raise ValueError("Graph must have exactly one exit node (out_degree == 0).")
 
-        # 2. Cycle detection using DFS
         visited_cycle = set()
         rec_stack = set()
         
@@ -204,7 +252,6 @@ class ExecutionGraph:
                 if has_cycle(node_id):
                     raise ValueError("ExecutionGraph contains a cycle.")
 
-        # 3. Reachability (No orphans)
         visited_reach = set()
         def dfs_reach(node_id: str):
             if node_id in visited_reach: return

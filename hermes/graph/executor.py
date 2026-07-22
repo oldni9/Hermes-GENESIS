@@ -3,10 +3,8 @@
 Graph Executor
 ===============================================================================
 
-Sprint 14: Sequential topological execution of an ExecutionGraph.
-Returns a GraphResult containing raw outputs, keeping the graph layer
-completely decoupled from the AI layer (no AIResponse imports).
-Guarantees GRAPH_FINISHED is emitted even on exceptions.
+Sprint 15.1 Update:
+Returns only the exit node's outputs in GraphResult.outputs, rather than the entire blackboard.
 ===============================================================================
 """
 from __future__ import annotations
@@ -50,7 +48,6 @@ class GraphExecutor:
                         "success": False,
                         "error": str(e)
                     })
-                    # Snapshot the blackboard to prevent mutation during unwinding
                     raise GraphExecutionError(
                         node_id, 
                         context.trace, 
@@ -69,7 +66,6 @@ class GraphExecutor:
                 if final_result.stop:
                     break
         finally:
-            # Guarantee that GRAPH_FINISHED is always emitted
             context.trace.add_event(1, TraceEventType.GRAPH_FINISHED, {"success": final_result.success})
             context.trace.finalize()
                 
@@ -78,10 +74,10 @@ class GraphExecutor:
             "completion_tokens": context.trace.metrics.total_completion_tokens
         }
         
-        # Return raw outputs. AgentExecutor will handle AIResponse mapping.
+        # Return ONLY the exit node's outputs, not the whole blackboard
         return GraphResult(
             success=final_result.success,
-            outputs=context.blackboard.to_dict(),
+            outputs=final_result.outputs,
             duration=time.time() - start_time,
             trace=context.trace,
             memory_candidates=context.blackboard.get("memory_candidates", []),

@@ -3,8 +3,8 @@
 Agent Trace & Observability
 ===============================================================================
 
-Sprint 14 Update:
-Added GRAPH_* trace events for Execution Graph telemetry.
+Sprint 15.1 Update:
+Added PARALLEL_BRANCH_STARTED, PARALLEL_BRANCH_FINISHED, MERGE_STARTED, MERGE_FINISHED.
 ===============================================================================
 """
 
@@ -75,6 +75,12 @@ class TraceEventType(str, Enum):
     NODE_STARTED = "node_started"
     NODE_FINISHED = "node_finished"
     GRAPH_FINISHED = "graph_finished"
+    
+    # Parallel Node Events (Sprint 15)
+    PARALLEL_BRANCH_STARTED = "parallel_branch_started"
+    PARALLEL_BRANCH_FINISHED = "parallel_branch_finished"
+    MERGE_STARTED = "merge_started"
+    MERGE_FINISHED = "merge_finished"
 
 
 @dataclass(slots=True)
