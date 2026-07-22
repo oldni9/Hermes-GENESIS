@@ -2,6 +2,10 @@
 ===============================================================================
 Hermes Memory Models
 ===============================================================================
+
+Sprint 13 Update:
+Persistence models only. Runtime retrieval models moved to retrieval.py.
+===============================================================================
 """
 from __future__ import annotations
 

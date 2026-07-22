@@ -3,8 +3,8 @@
 Planner Base Architecture
 ===============================================================================
 
-Sprint 12 Update:
-Removed parallel_workers from DebateConfig (moved to RuntimePolicy).
+Sprint 13 Update:
+Updated import for RetrievedContext.
 ===============================================================================
 """
 
@@ -12,13 +12,16 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 
 from hermes.ai.conversation import AIConversation
 from hermes.core.runtime import RuntimeContext
 from hermes.agent.executor.engine import ExecutionEngine
 from hermes.agent.executor.result import AgentResult, StopReason
 from hermes.agent.executor.trace import AgentTrace
+
+if TYPE_CHECKING:
+    from hermes.memory.retrieval import RetrievedContext
 
 
 @dataclass
@@ -30,6 +33,7 @@ class PlannerState:
     reflection_count: int = 0
     runtime_context: Optional[RuntimeContext] = None
     objective: str = ""
+    retrieved_context: Optional["RetrievedContext"] = None
 
 
 @dataclass

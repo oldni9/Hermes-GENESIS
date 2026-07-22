@@ -3,8 +3,9 @@
 Agent Executor (Facade)
 ===============================================================================
 
-Wires dependencies together and delegates execution to the Planner.
-The Executor is now permanently frozen as a simple composition root.
+Sprint 13 Update:
+Executor queries the UnifiedMemoryManager (using manager's default policy) and 
+passes structured RetrievedContext to PlannerState.
 ===============================================================================
 """
 
@@ -16,6 +17,8 @@ from typing import Optional, Union
 from hermes.ai.conversation import AIConversation
 from hermes.ai.tool import ToolManager
 from hermes.core.runtime import RuntimePolicy, RuntimeContext, RuntimeMetrics, CancellationToken
+from hermes.memory.manager import UnifiedMemoryManager
+from hermes.memory.retrieval import RetrievedContext
 from hermes.workspace.workspace import Workspace
 from hermes.agent.executor.protocols import PipelineProtocol
 from hermes.agent.executor.result import AgentResult
@@ -40,12 +43,14 @@ class AgentExecutor:
         model: str = "",
         planner: Optional[Union[str, Planner]] = None,
         config: Optional[PlannerConfig] = None,
+        memory_manager: Optional[UnifiedMemoryManager] = None,
     ) -> None:
         self._pipeline = pipeline
         self._tool_manager = tool_manager
         self._provider = provider
         self._model = model
         self._config = config or PlannerConfig()
+        self._memory_manager = memory_manager
         
         if isinstance(planner, Planner):
             self._planner = planner
@@ -93,6 +98,12 @@ class AgentExecutor:
             runtime_context=runtime_context,
         )
 
+        # Sprint 13: Memory Retrieval (Manager owns default policy)
+        retrieved_context: Optional[RetrievedContext] = None
+        if self._memory_manager:
+            retrieved_context = self._memory_manager.recall(prompt)
+
+        # Prepare conversation (System prompt is kept pure)
         if system_prompt:
             conv_state.append_system_if_empty(system_prompt)
         conv_state.append_user(prompt)
@@ -103,10 +114,13 @@ class AgentExecutor:
             iteration=0,
             reflection_count=0,
             runtime_context=runtime_context,
-            objective=prompt  # Sprint 11: Pass objective explicitly
+            objective=prompt,
+            retrieved_context=retrieved_context
         )
 
+        # Delegate to Planner
         result = self._planner.run(engine, state, self._config)
+        
         metrics.finish()
         return result
 

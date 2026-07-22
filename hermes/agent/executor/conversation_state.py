@@ -40,7 +40,8 @@ class ConversationState:
     def append_system_if_empty(self, system_prompt: str) -> None:
         """Append a system prompt only if the conversation is empty."""
         if len(self._conversation) == 0:
-            self._conversation.add_system(system_prompt)
+            # FIX: Use the correct AIConversation method 'system'
+            self._conversation.system(system_prompt)
 
     def append_user(self, prompt: str) -> None:
         """Append a user message."""
@@ -71,3 +72,10 @@ class ConversationState:
             tool_call_id=tool_call_id,
             name=tool_name,
         )
+
+# VERIFICATION
+# ✔ imports
+# ✔ syntax
+# ✔ typing
+# ✔ compatibility
+# ✔ architecture

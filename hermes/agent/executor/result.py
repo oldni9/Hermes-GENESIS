@@ -3,33 +3,19 @@
 Agent Executor Result
 ===============================================================================
 
-Dependencies:
-    - dataclasses
-    - enum
-    - hermes.ai.response
-    - hermes.agent.executor.trace
-
-Consumes:
-    - AIResponse
-    - AgentTrace
-
-Produces:
-    - StopReason
-    - AgentResult
-
-Public API:
-    - AgentResult
+Sprint 13 Update:
+Added typed MemoryCandidate list to AgentResult for future planner-driven persistence.
 ===============================================================================
 """
-
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
+from typing import List, Optional
 
 from hermes.ai.response import AIResponse
 from hermes.agent.executor.trace import AgentTrace
+from hermes.memory.retrieval import MemoryCandidate
 
 
 class StopReason(str, Enum):
@@ -55,6 +41,7 @@ class AgentResult:
     token_usage: Optional[dict] = None
     stop_reason: StopReason = StopReason.COMPLETED
     trace: Optional[AgentTrace] = None
+    memory_candidates: List[MemoryCandidate] = field(default_factory=list)
 
 # VERIFICATION
 # ✔ imports
