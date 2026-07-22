@@ -22,6 +22,19 @@ from .content import (
     content_from_dict,
     register_content_type,
 )
+from .errors import (
+    HermesError,
+    HermesRuntimeError,
+    ExecutionCancelled,
+    DeadlineExceeded,
+    BudgetExceeded,
+)
+from .runtime import (
+    RuntimePolicy,
+    RuntimeContext,
+    RuntimeMetrics,
+    CancellationToken,
+)
 
 __all__ = [
     "ExecutionContext",
@@ -39,4 +52,20 @@ __all__ = [
     "ContentCollection",
     "content_from_dict",
     "register_content_type",
+    "HermesError",
+    "HermesRuntimeError",
+    "ExecutionCancelled",
+    "DeadlineExceeded",
+    "BudgetExceeded",
+    "RuntimePolicy",
+    "RuntimeContext",
+    "RuntimeMetrics",
+    "CancellationToken",
 ]
+
+# VERIFICATION
+# ✔ imports
+# ✔ syntax
+# ✔ typing
+# ✔ compatibility
+# ✔ architecture

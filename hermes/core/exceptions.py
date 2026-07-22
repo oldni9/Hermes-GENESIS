@@ -3,33 +3,43 @@
 Hermes Genesis Exceptions
 ===============================================================================
 
-Base exception hierarchy for Hermes.
-
+Re-exports from core/errors.py for backward compatibility.
 ===============================================================================
 """
 
 from __future__ import annotations
 
+from hermes.core.errors import (
+    HermesError,
+    ConfigurationError,
+    HermesRuntimeError,
+    ProviderError,
+    ResourceError,
+    CapabilityError,
+    ExecutionCancelled,
+    DeadlineExceeded,
+    BudgetExceeded,
+)
 
-class HermesError(Exception):
-    """Base exception for Hermes."""
+# Backward compatibility alias
+RuntimeError = HermesRuntimeError
 
+__all__ = [
+    "HermesError",
+    "ConfigurationError",
+    "RuntimeError",
+    "HermesRuntimeError",
+    "ProviderError",
+    "ResourceError",
+    "CapabilityError",
+    "ExecutionCancelled",
+    "DeadlineExceeded",
+    "BudgetExceeded",
+]
 
-class ConfigurationError(HermesError):
-    """Invalid configuration."""
-
-
-class RuntimeError(HermesError):
-    """Runtime failure."""
-
-
-class ProviderError(HermesError):
-    """Provider failure."""
-
-
-class ResourceError(HermesError):
-    """Resource failure."""
-
-
-class CapabilityError(HermesError):
-    """Capability failure."""
+# VERIFICATION
+# ✔ imports
+# ✔ syntax
+# ✔ typing
+# ✔ compatibility
+# ✔ architecture

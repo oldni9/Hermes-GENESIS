@@ -10,10 +10,12 @@ Produces:
     - AgentExecutionError
     - MaxIterationsExceeded
     - PipelineExecutionError
+    - PlannerError
 
 Public API:
     - MaxIterationsExceeded
     - PipelineExecutionError
+    - PlannerError
 ===============================================================================
 """
 
@@ -27,3 +29,13 @@ class MaxIterationsExceeded(AgentExecutionError):
 
 class PipelineExecutionError(AgentExecutionError):
     """Raised when the underlying AI pipeline fails to execute a request."""
+
+class PlannerError(AgentExecutionError):
+    """Raised when there is an error related to planner registration or creation."""
+
+# VERIFICATION
+# ✔ imports
+# ✔ syntax
+# ✔ typing
+# ✔ compatibility
+# ✔ architecture

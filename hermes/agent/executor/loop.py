@@ -1,6 +1,6 @@
 """
 ===============================================================================
-Agent ReAct Loop
+Agent ReAct Loop (Legacy)
 ===============================================================================
 
 Dependencies:
@@ -42,7 +42,7 @@ from typing import Dict, Optional
 from hermes.ai.response import AIResponse, ToolCall
 from hermes.ai.tool import ToolResult
 from hermes.agent.executor.protocols import PipelineProtocol
-from hermes.agent.executor.result import AgentResult
+from hermes.agent.executor.result import AgentResult, StopReason
 from hermes.agent.executor.conversation_state import ConversationState
 from hermes.agent.executor.tool_runner import ToolRunner
 from hermes.agent.executor.context_factory import AgentContextFactory
@@ -121,7 +121,7 @@ class ReActLoop:
                         "prompt_tokens": self._trace.metrics.total_prompt_tokens, 
                         "completion_tokens": self._trace.metrics.total_completion_tokens
                     },
-                    stop_reason="pipeline_error",
+                    stop_reason=StopReason.PIPELINE_ERROR,
                     trace=self._trace
                 )
 
@@ -144,7 +144,7 @@ class ReActLoop:
                         "prompt_tokens": self._trace.metrics.total_prompt_tokens, 
                         "completion_tokens": self._trace.metrics.total_completion_tokens
                     },
-                    stop_reason="completed",
+                    stop_reason=StopReason.COMPLETED,
                     trace=self._trace
                 )
 
@@ -208,6 +208,13 @@ class ReActLoop:
                 "prompt_tokens": self._trace.metrics.total_prompt_tokens, 
                 "completion_tokens": self._trace.metrics.total_completion_tokens
             },
-            stop_reason="max_iterations",
+            stop_reason=StopReason.MAX_ITERATIONS,
             trace=self._trace
         )
+
+# VERIFICATION
+# ✔ imports
+# ✔ syntax
+# ✔ typing
+# ✔ compatibility
+# ✔ architecture

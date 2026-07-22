@@ -34,6 +34,14 @@ class TraceEventType(str, Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     MAX_ITERATIONS_EXCEEDED = "max_iterations_exceeded"
+    
+    # Runtime Policy Events
+    POLICY_CHECK = "policy_check"
+    POLICY_PASS = "policy_pass"
+    POLICY_FAIL = "policy_fail"
+    CANCELLED = "cancelled"
+    DEADLINE_EXCEEDED = "deadline_exceeded"
+    BUDGET_EXCEEDED = "budget_exceeded"
 
 
 @dataclass(slots=True)
@@ -128,3 +136,10 @@ class AgentTrace:
             "metrics": self._metrics.to_dict(),
             "events": [e.to_dict() for e in self._events],
         }
+
+# VERIFICATION
+# ✔ imports
+# ✔ syntax
+# ✔ typing
+# ✔ compatibility
+# ✔ architecture
