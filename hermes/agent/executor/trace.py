@@ -3,18 +3,22 @@
 Agent Trace & Observability
 ===============================================================================
 
-Sprint 15.1 Update:
-Added PARALLEL_BRANCH_STARTED, PARALLEL_BRANCH_FINISHED, MERGE_STARTED, MERGE_FINISHED.
+Sprint 17A.2 Update:
+- Trace.subscribe() now returns an unsubscribe callable.
+- Subscriber exceptions are logged rather than silently swallowed.
 ===============================================================================
 """
 
 from __future__ import annotations
 
+import logging
 import threading
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 
 class TraceEventType(str, Enum):
@@ -134,6 +138,9 @@ class AgentTrace:
         # Fine-grained locks for thread safety
         self._event_lock = threading.Lock()
         self._metric_lock = threading.Lock()
+        
+        # Subscribers for real-time event streaming (Observer pattern)
+        self._subscribers: List[Callable[[TraceEvent], None]] = []
 
     @property
     def events(self) -> List[TraceEvent]:
@@ -150,17 +157,39 @@ class AgentTrace:
             return time.time() - self._start_time
         return self._end_time - self._start_time
 
+    def subscribe(self, callback: Callable[[TraceEvent], None]) -> Callable[[], None]:
+        """Subscribe to real-time trace events. Returns an unsubscribe callable."""
+        with self._event_lock:
+            self._subscribers.append(callback)
+            
+        def unsubscribe() -> None:
+            with self._event_lock:
+                try:
+                    self._subscribers.remove(callback)
+                except ValueError:
+                    pass
+                    
+        return unsubscribe
+
     def add_event(self, iteration: int, event_type: TraceEventType, payload: Optional[Dict[str, Any]] = None) -> None:
         with self._event_lock:
             self._seq_counter += 1
-            self._events.append(TraceEvent(
+            event = TraceEvent(
                 timestamp=time.time(),
                 iteration=iteration,
                 event_type=event_type,
                 payload=payload or {},
                 sequence=self._seq_counter,
                 thread=threading.get_ident()
-            ))
+            )
+            self._events.append(event)
+            subs = list(self._subscribers)
+            
+        for sub in subs:
+            try:
+                sub(event)
+            except Exception:
+                logger.exception("Trace subscriber failed to process event.")
 
     def add_token_usage(self, prompt_tokens: int, completion_tokens: int) -> None:
         with self._metric_lock:

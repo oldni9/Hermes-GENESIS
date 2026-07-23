@@ -3,10 +3,10 @@
 Agent Executor (Facade)
 ===============================================================================
 
-Sprint 14 Update:
-AgentExecutor now accepts an ExecutionPlan. If provided, it delegates
-execution to the GraphExecutor. It maps PlannerState to GraphContext,
-and maps the raw GraphResult.outputs to an AIResponse/AgentResult.
+Sprint 17A.2 Update:
+- Fixed conversation truthiness bug (empty AIConversation evaluating to False).
+- Accepts an optional external AgentTrace for real-time streaming.
+- Handles `conversation=None` gracefully by creating a new one.
 ===============================================================================
 """
 
@@ -20,7 +20,8 @@ from hermes.ai.response import AIResponse
 from hermes.ai.tool import ToolManager
 from hermes.core.runtime import RuntimePolicy, RuntimeContext, RuntimeMetrics, CancellationToken
 from hermes.memory.manager import UnifiedMemoryManager
-from hermes.memory.retrieval import RetrievedContext
+from hermes.memory.persistence import MemoryPersistenceService
+from hermes.memory.retrieval import RetrievedContext, MemoryCandidate
 from hermes.workspace.workspace import Workspace
 from hermes.agent.executor.protocols import PipelineProtocol
 from hermes.agent.executor.result import AgentResult, StopReason
@@ -49,6 +50,7 @@ class AgentExecutor:
         planner: Optional[Union[str, Planner, ExecutionPlan]] = None,
         config: Optional[PlannerConfig] = None,
         memory_manager: Optional[UnifiedMemoryManager] = None,
+        memory_persistence_service: Optional[MemoryPersistenceService] = None,
     ) -> None:
         self._pipeline = pipeline
         self._tool_manager = tool_manager
@@ -56,6 +58,9 @@ class AgentExecutor:
         self._model = model
         self._config = config or PlannerConfig()
         self._memory_manager = memory_manager
+        self._memory_persistence_service = memory_persistence_service or (
+            MemoryPersistenceService(memory_manager) if memory_manager else None
+        )
         
         self._execution_plan: Optional[ExecutionPlan] = None
         self._planner: Optional[Planner] = None
@@ -75,18 +80,24 @@ class AgentExecutor:
     def run(
         self,
         prompt: str,
-        conversation: AIConversation,
+        conversation: Optional[AIConversation] = None,
         system_prompt: Optional[str] = None,
         workspace: Optional[Workspace] = None,
         policy: Optional[RuntimePolicy] = None,
         cancellation_token: Optional[CancellationToken] = None,
+        trace: Optional[AgentTrace] = None,
     ) -> AgentResult:
         """Run the agent loop for a given prompt."""
-        conv_state = ConversationState(conversation)
+        # FIX: Use explicit `is None` check because AIConversation implements __len__
+        # and an empty conversation evaluates to False in boolean contexts.
+        active_conversation = conversation if conversation is not None else AIConversation()
+        
+        conv_state = ConversationState(active_conversation)
         context_factory = AgentContextFactory()
         tool_runner = ToolRunner(self._tool_manager)
         request_builder = RequestBuilder(provider=self._provider, model=self._model)
-        trace = AgentTrace()
+        
+        active_trace = trace or AgentTrace()
         
         policy = policy or RuntimePolicy()
         cancellation_token = cancellation_token or CancellationToken()
@@ -116,11 +127,14 @@ class AgentExecutor:
             conv_state.append_system_if_empty(system_prompt)
         conv_state.append_user(prompt)
 
+        graph_context: Optional[GraphContext] = None
+        result: AgentResult
+
         if self._execution_plan:
             graph_context = GraphContext(
                 conversation=conv_state.conversation,
                 runtime_context=runtime_context,
-                trace=trace,
+                trace=active_trace,
                 blackboard=Blackboard({
                     "objective": prompt,
                     "retrieved_context": retrieved_context
@@ -135,7 +149,6 @@ class AgentExecutor:
                     graph_context
                 )
                 
-                # Safely resolve the final text using the exit node's output_key
                 exit_node = self._execution_plan.graph.nodes[self._execution_plan.graph.exit_node]
                 final_text = graph_result.outputs.get(exit_node.output_key, "")
                 
@@ -150,7 +163,7 @@ class AgentExecutor:
                     duration=graph_result.duration,
                     token_usage=graph_result.token_usage,
                     stop_reason=StopReason.COMPLETED if graph_result.success else StopReason.PIPELINE_ERROR,
-                    trace=trace,
+                    trace=active_trace,
                     memory_candidates=graph_result.memory_candidates
                 )
             except GraphExecutionError as e:
@@ -170,7 +183,7 @@ class AgentExecutor:
         else:
             state = PlannerState(
                 conversation=conv_state.conversation,
-                trace=trace,
+                trace=active_trace,
                 iteration=0,
                 reflection_count=0,
                 runtime_context=runtime_context,
@@ -180,6 +193,13 @@ class AgentExecutor:
             result = self._planner.run(engine, state, self._config)
         
         metrics.finish()
+        
+        if self._memory_persistence_service and result.response.success and result.memory_candidates:
+            self._memory_persistence_service.persist(
+                candidates=list(result.memory_candidates),
+                context=graph_context
+            )
+            
         return result
 
 # VERIFICATION

@@ -3,7 +3,8 @@
 Memory Retrieval Models
 ===============================================================================
 
-Sprint 13: Runtime retrieval state models, separated from persistence models.
+Sprint 16 Update:
+MemoryCandidate is now frozen (immutable) to prevent mutation during pipeline processing.
 ===============================================================================
 """
 from __future__ import annotations
@@ -42,10 +43,10 @@ class RecallPolicy:
     top_k: int = 5
 
 
-@dataclass
+@dataclass(frozen=True)
 class MemoryCandidate:
     """
-    Represents a piece of information a planner wants to persist.
+    Immutable representation of a piece of information a planner wants to persist.
     Planners emit these instead of calling memory_manager.remember() directly.
     """
     text: str
@@ -54,3 +55,4 @@ class MemoryCandidate:
     metadata: Dict[str, Any] = field(default_factory=dict)
     confidence: float = 0.0
     reason: str = ""
+    source_planner: str = ""

@@ -2,21 +2,7 @@
 ===============================================================================
 Agent Conversation State
 ===============================================================================
-
-Dependencies:
-    - hermes.ai.conversation
-
-Consumes:
-    - AIConversation
-
-Produces:
-    - Mutations on AIConversation
-
-Public API:
-    - ConversationState
-===============================================================================
 """
-
 from __future__ import annotations
 
 from hermes.ai.conversation import AIConversation

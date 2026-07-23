@@ -3,10 +3,9 @@
 Execution Graph Models
 ===============================================================================
 
-Sprint 15.1 Update:
-Added GraphRunner and ParallelRunner protocols.
-NodeResult is frozen (immutable) to prevent post-merge mutation.
-NodeMetadata remains mutable to avoid false immutability, but uses Tuples for collections.
+Sprint 16 Update:
+GraphResult carries memory_candidates explicitly for AgentExecutor to consume.
+NodeMetadata is frozen (immutable) and aggregates memory_candidates from nested subgraphs.
 ===============================================================================
 """
 from __future__ import annotations
@@ -20,15 +19,16 @@ if TYPE_CHECKING:
     from hermes.agent.executor.trace import AgentTrace
     from hermes.runtime.parallel import ParallelJob, ParallelResult
     from hermes.core.runtime import CancellationToken
+    from hermes.memory.retrieval import MemoryCandidate
 
 
 class GraphExecutionError(Exception):
     """Raised when a node fails during graph execution, carrying context."""
     def __init__(
         self, 
-        node_id: str, 
-        trace: "AgentTrace", 
-        blackboard_snapshot: Dict[str, Any], 
+        node_id: str,
+        trace: "AgentTrace",
+        blackboard_snapshot: Dict[str, Any],
         original: Exception
     ) -> None:
         self.node_id = node_id
@@ -71,12 +71,12 @@ class GraphContext:
     blackboard: Blackboard = field(default_factory=Blackboard)
 
 
-@dataclass
+@dataclass(frozen=True)
 class NodeMetadata:
-    """Typed metadata for a NodeResult. Uses tuples for collections, but remains mutable."""
+    """Typed, immutable metadata for a NodeResult. Uses tuples for collections."""
     duration: float = 0.0
     token_usage: Dict[str, int] = field(default_factory=dict)
-    memory_candidates: Tuple[Any, ...] = field(default_factory=tuple)
+    memory_candidates: Tuple["MemoryCandidate", ...] = field(default_factory=tuple)
     trace: Optional["AgentTrace"] = None
     branch_metadata: Tuple["NodeMetadata", ...] = field(default_factory=tuple)
 
@@ -97,7 +97,7 @@ class GraphResult:
     outputs: Dict[str, Any]
     duration: float
     trace: "AgentTrace"
-    memory_candidates: List[Any] = field(default_factory=list)
+    memory_candidates: List["MemoryCandidate"] = field(default_factory=list)
     token_usage: Dict[str, int] = field(default_factory=dict)
 
     def to_node_result(self) -> NodeResult:
@@ -118,8 +118,8 @@ class GraphResult:
 class GraphRunner(Protocol):
     """Protocol for executing an ExecutionGraph, decoupling nodes from the executor."""
     def run(
-        self, 
-        graph: "ExecutionGraph", 
+        self,
+        graph: "ExecutionGraph",
         context: GraphContext
     ) -> GraphResult:
         ...
@@ -128,8 +128,8 @@ class GraphRunner(Protocol):
 class ParallelRunner(Protocol):
     """Protocol for executing parallel jobs, decoupling nodes from the service."""
     def execute(
-        self, 
-        jobs: List["ParallelJob"], 
+        self,
+        jobs: List["ParallelJob"],
         cancellation_token: Optional["CancellationToken"] = None,
         timeout: Optional[float] = None
     ) -> List["ParallelResult"]:
@@ -149,10 +149,10 @@ class ExecutionGraph:
     Validates acyclicity, single entry/exit, reachability, and structural integrity.
     """
     def __init__(
-        self, 
-        nodes: Dict[str, Any], 
-        edges: List[ExecutionEdge], 
-        entry_node: str, 
+        self,
+        nodes: Dict[str, Any],
+        edges: List[ExecutionEdge],
+        entry_node: str,
         exit_node: str
     ) -> None:
         self._nodes = nodes
@@ -200,7 +200,7 @@ class ExecutionGraph:
             raise ValueError(f"Entry node '{self._entry_node}' not found in nodes.")
         if self._exit_node not in self._nodes:
             raise ValueError(f"Exit node '{self._exit_node}' not found in nodes.")
-            
+
         if self._entry_node == self._exit_node and len(self._nodes) > 1:
             raise ValueError("Entry and exit nodes cannot be the same in a multi-node graph.")
 
@@ -232,18 +232,18 @@ class ExecutionGraph:
 
         visited_cycle = set()
         rec_stack = set()
-        
+
         def has_cycle(node_id: str) -> bool:
             visited_cycle.add(node_id)
             rec_stack.add(node_id)
-            
+
             for child in self._children[node_id]:
                 if child not in visited_cycle:
                     if has_cycle(child):
                         return True
                 elif child in rec_stack:
                     return True
-                    
+
             rec_stack.remove(node_id)
             return False
 
@@ -258,7 +258,7 @@ class ExecutionGraph:
             visited_reach.add(node_id)
             for child in self._children[node_id]:
                 dfs_reach(child)
-        
+
         dfs_reach(self._entry_node)
         if visited_reach != set(self._nodes.keys()):
             raise ValueError("Graph contains orphan/unreachable nodes.")

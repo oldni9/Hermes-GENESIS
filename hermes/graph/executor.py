@@ -3,8 +3,9 @@
 Graph Executor
 ===============================================================================
 
-Sprint 15.1 Update:
-Returns only the exit node's outputs in GraphResult.outputs, rather than the entire blackboard.
+Sprint 16 Update:
+GraphExecutor extracts memory_candidates from the exit node's metadata
+and carries them in GraphResult. It remains completely memory-agnostic.
 ===============================================================================
 """
 from __future__ import annotations
@@ -74,13 +75,15 @@ class GraphExecutor:
             "completion_tokens": context.trace.metrics.total_completion_tokens
         }
         
-        # Return ONLY the exit node's outputs, not the whole blackboard
+        # Extract memory candidates from the exit node's metadata
+        memory_candidates = list(final_result.metadata.memory_candidates)
+        
         return GraphResult(
             success=final_result.success,
             outputs=final_result.outputs,
             duration=time.time() - start_time,
             trace=context.trace,
-            memory_candidates=context.blackboard.get("memory_candidates", []),
+            memory_candidates=memory_candidates,
             token_usage=token_usage
         )
 
